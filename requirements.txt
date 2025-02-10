@@ -1,0 +1,7 @@
+Flask
+Flask-SocketIO
+flask-cors
+groq
+requests
+pandas
+python-dotenv

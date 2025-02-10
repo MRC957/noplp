@@ -35,12 +35,25 @@ export default class ControllerComponent extends ClientComponent {
         super.componentDidMount();
         // load playlist
         const playlistCb = this.setPlaylist.bind(this);
-        fetch('/playlist.json')
+        fetch('http://localhost:4001/api/playlist')
             .then(response => response.json())
             .then((data) => {
                 playlistCb(data);
+            })
+            .catch(error => {
+                console.error('Error fetching playlist:', error);
             });
     }
+
+    // componentDidMount() {
+    //     super.componentDidMount();
+    //     // load playlist
+    //     const playlistCb = this.setPlaylist.bind(this);
+    //     this.socket.emit('get-playlist', (response) => {
+    //         playlistCb(response);
+    //     });
+    //     console.log(response);
+    // }
 
     setPlaylist(data) {
         this.setState({
@@ -55,23 +68,23 @@ export default class ControllerComponent extends ClientComponent {
             ...this.state,
             ffaMode: false,
             pickedSongs: [],
-            pickedCategories: [],
+            pickedCategories: []
         });
     }
 
     handlePerfModeToggle() {
         this.setState({
             ...this.state,
-            perfMode: !this.state.perfMode,
+            perfMode: !this.state.perfMode
         });
         this.socket.emit('set-perf-mode', this.state.perfMode);
     }
 
     handleFfaToggle() {
-        console.log('handle ffa mode', this.state.ffaMode)
+        console.log('handle ffa mode', this.state.ffaMode);
         this.setState({
             ...this.state,
-            ffaMode: !this.state.ffaMode,
+            ffaMode: !this.state.ffaMode
         });
     }
 

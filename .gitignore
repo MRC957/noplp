@@ -1,3 +1,9 @@
 node_modules/
 **/songs/*.mp3
 **/lyrics/*.lrc
+**.pyc
+
+
+.env
+.venv
+.vscode

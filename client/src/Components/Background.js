@@ -27,7 +27,7 @@ export default class  Background extends React.Component {
     }
 
     componentDidUpdate(prevProps) {
-        console.log(' coucou');
+        // console.log(' coucou');
         if (prevProps.effect !== this.props.effect) {
             // trigger effect
             const apply = ((c) => {
