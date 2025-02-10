@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 import os
 import json
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
@@ -23,15 +24,40 @@ def serve(path):
 @app.route('/api/playlist', methods=['GET'])
 def get_playlist():
     try:
-
-        # TODO: create 5 calls (1/catégory) where lyrics are checked to be available. 
-        # The song ID + lyrics will be stored as files for future reuse
-        # ID and metadata will be added by relevent methods, not necessarily all in this function.
-
-        # Assuming playlist.json is in the same directory as the frontend public folder
+        # Read the playlist.json
         with open('client/public/playlist.json', 'r') as f:
             playlist = json.load(f)
+            
+        # Update the lyrics file path to point to CSV instead of LRC
+        # for song in playlist['songs']:
+        #     if 'files' in song:
+        #         # Change extension from .lrc to .csv
+        #         song['files']['lyrics'] = song['files']['lyrics'].replace('.lrc', '.csv')
+                
         return jsonify(playlist)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lyrics/<song_id>', methods=['GET'])
+def get_lyrics(song_id):
+    try:
+        # Assuming CSV files are stored with song_id as filename
+        csv_path = f'client/public/lyrics/{song_id}.csv'
+        
+        # Read CSV file using pandas
+        df = pd.read_csv(csv_path).fillna("")
+        mapping_columns = {
+            "words": "content",
+            "startTimeMs": "timecode"
+        }
+        df.rename(columns=mapping_columns, inplace=True)
+        df = df.astype({'timecode': 'int32'})
+
+
+        # Convert DataFrame to list of records
+        lyrics = df.to_dict(orient='records')
+
+        return jsonify(lyrics)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

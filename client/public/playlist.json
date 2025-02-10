@@ -37,7 +37,7 @@
             "expected_words": 5
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379efc01",
+            "id": "5mHG6QC2r02VhELkp8DZeI",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f00",
             "artist": "Jacques Brel",
             "title": "Quand on n'a que l'amour",
@@ -51,7 +51,7 @@
             "expected_words": 3
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379efc11",
+            "id": "5WGQYYrk9ITIT3PEOjtTBY",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f05",
             "artist": "Zazie",
             "title": "Zen",
@@ -65,7 +65,7 @@
             "expected_words": 6
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379efcc4",
+            "id": "7gHRVNiuL66Z6fE6DwZaFT",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f02",
             "artist": "Henri Salvador",
             "title": "Jardin d'Hiver",
@@ -79,7 +79,7 @@
             "expected_words": 6
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379eff4",
+            "id": "1eg2GUAxtsngVbrylDQ4tO",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f00",
             "artist": "Gilbert Bécaud",
             "title": "Je reviens te chercher",
@@ -107,13 +107,13 @@
             "expected_words": 6
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379efa2",
+            "id": "7wBGD8HGW91tnIlOTxrWN2",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f03",
             "artist": "Maxime Le Forestier",
             "title": "Education sentimentale",
             "year": "1973",
             "files": {
-                "lyrics": "/lyrics/education_sentimentale.lrc",
+                "lyrics": "/lyrics/7wBGD8HGW91tnIlOTxrWN2.csv",
                 "music": "/songs/education_sentimentale.mp3"
             },
             "guess_line": 6,
@@ -121,7 +121,7 @@
             "expected_words": 7
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379efe2",
+            "id": "1fU9wVDi3yZrawv1Rc4vcS",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f05",
             "artist": "Marc Lavoine",
             "title": "Elle a les yeux revolver",
@@ -135,7 +135,7 @@
             "expected_words": 5
         },
         {
-            "id": "a491eb43-6a44-46e1-a1ea-bc92379ede2",
+            "id": "1MOSRjdAbUhvLNnHCdUEL5",
             "category": "3394634a-29d0-40a6-bf24-5480acef9f03",
             "artist": "Renaud",
             "title": "Mistral Gagnant",

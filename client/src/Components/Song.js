@@ -92,7 +92,7 @@ export default class Song extends React.Component {
         this.reset();
 
         const parts = this.props.song.guess_timecode.split(':');
-        this.guessTimecode = Math.floor((parseInt(parts[0]) * 60 + parseFloat(parts[1]))*100);
+        this.guessTimecode = Math.floor((parseInt(parts[0]) * 60 + parseFloat(parts[1]))*1000);
 
         this.audioSource.current.src = this.props.song.files.music;
         this.audio.current.load();
@@ -107,13 +107,7 @@ export default class Song extends React.Component {
             timeUpdateCb();
         });
 
-        const lyricsCb = this.loadLrcFile.bind(this);
-        fetch(this.props.song.files.lyrics)
-            .then(response => response.text())
-            .then(data => {
-                lyricsCb(data);
-            });
-
+        this.loadLrcFile();
     }
 
     reset() {
@@ -153,7 +147,7 @@ export default class Song extends React.Component {
         if (!this.audio.current)
             return;
 
-        const timecode = Math.floor(this.audio.current.currentTime * 100);
+        const timecode = Math.floor(this.audio.current.currentTime * 1000);
         const i = this.state.currentLine; 
         const nextCt = (i + 1 < this.lyrics.length) ? this.lyrics[i+1].timecode : Number.MAX_VALUE;
 
@@ -164,7 +158,8 @@ export default class Song extends React.Component {
             });
         }
 
-        if (this.guessTimecode < timecode) {
+        // if (this.guessTimecode < timecode) {
+        if (this.state.currentLine >= this.props.song.guess_line) {
             this.audio.current.pause();
             const timeoutCb = () => {
                 this.props.jukebox('bed');
@@ -174,22 +169,20 @@ export default class Song extends React.Component {
     }
 
     loadLrcFile(file) {
-        const lines = file.split('\n');
-        for (let i in lines) {
-            const line = lines[i].trim();
-            if (line.length < 10)
-                continue;
-            if (line[0] !== '[' && line[9] !== ']')
-                continue;
-            const parts = line.slice(1, 9).split(':');
-            const timecode = Math.floor((parseInt(parts[0]) * 60 + parseFloat(parts[1]))*100)  
-            const content = line.slice(10);
-            this.lyrics.push({
-                timecode: timecode,
-                content: content
+        const songId = this.props.song.id;
+        
+        fetch(`http://localhost:4001/api/lyrics/${songId}`)
+            .then(response => response.json())
+            .then(data => {
+                this.lyrics = data.map(item => ({
+                    timecode: Math.floor(item.timecode),
+                    content: item.content
+                }));
+                this.handleLyricsReady();
+            })
+            .catch(error => {
+                console.error('Error loading lyrics:', error);
             });
-        }
-        this.handleLyricsReady();
     }
 
     startPlaying() {

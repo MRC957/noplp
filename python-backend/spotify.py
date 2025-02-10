@@ -161,7 +161,6 @@ class SpotifyLyricsDriver:
         import pandas as pd
         df = pd.DataFrame(rsp.json()["lyrics"]["lines"])
         df = df[["startTimeMs", "words"]]
-        df.to_csv(f"{track_id}.csv", index=False)
         return df
     
         # Count the number of words in each line separated by a space " " or a " ' "
