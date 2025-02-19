@@ -34,3 +34,9 @@
 .lyrics-word.freeze {
     color: #6c89e8;
 }
+
+#spotify-player {
+    margin: 20px 0;
+    height: 100px;
+    width: 100%;
+}

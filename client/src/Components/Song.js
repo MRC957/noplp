@@ -18,75 +18,71 @@ export default class Song extends React.Component {
             currentLine: -1,
             wordsClass: [],
         };
-        this.audio = React.createRef();
-        this.audioSource = React.createRef();
+        this.spotifyPlayer = React.createRef();
         this.lyrics = [];
         this.guessTimecode = 0;
         this.musicBedTimeout = null;
+        this.isFirstMount = true;
     }
 
     componentDidMount() {
         this.load();
+
+        // window.onSpotifyIframeApiReady = (IFrameAPI) => {
+        //     const element = document.getElementById('spotify-player');
+        //     const options = {
+        //         width: '100%',
+        //         height: '100',
+        //     };
+        //     const callback = (EmbedController) => {
+        //         this.spotifyController = EmbedController;
+        //         EmbedController.addListener('playback_update', (e) => {
+        //             if (e.data.position) {
+        //                 this.handleLyricsTimecodeUpdate(e.data.position * 1000);
+        //             }
+        //         });
+        //     };
+        //     IFrameAPI.createController(element, options, callback);
+        // };
+
+        // // Load Spotify Embed SDK
+        // const script = document.createElement('script');
+        // script.src = 'https://open.spotify.com/embed-podcast/iframe-api/v1';
+        // script.async = true;
+        // document.body.appendChild(script);
     }
 
     componentDidUpdate(prevProps) {
         if (this.props.song.id !== prevProps.song.id) {
-            this.reset();
+            // this.reset();
             this.load();
         }
         this.startPlaying();
 
         const suggestedLyrics = this.props.suggestedLyrics;
         if (suggestedLyrics.state !== prevProps.suggestedLyrics.state) {
-
-            console.log('Suggested state changed', suggestedLyrics)
-            if (suggestedLyrics.state !== STATE_LYRICS_NONE && this.props.song.guess_line === this.state.currentLine) {
+            if (this.shouldShowSuggestedLyrics()) {
                 const correctWords = this.lyrics[this.state.currentLine].content.split(' ');
-                let lyrics = suggestedLyrics.content;
-                if (suggestedLyrics.state === STATE_LYRICS_REVEAL) {
-                    lyrics = this.lyrics[this.state.currentLine].content;
-                }
-                const wordsClass = lyrics.split(' ').map((w, i) => {
-                    let wordClass = '';
-                    if (suggestedLyrics.state === STATE_LYRICS_FROZEN) {
-                        wordClass = 'freeze';
-                    } else if (suggestedLyrics.state === STATE_LYRICS_VALIDATE) {
-                        if (i < correctWords.length && correctWords[i].toUpperCase() === w.toUpperCase()) {
-                            wordClass = 'good';
-                            console.log('good for', w , i)
-                        } else {
-                            console.log('bad for', w , i)
-                            wordClass = 'bad'
-                        }
-                    }
-                    return wordClass
-                });
+                const lyrics = this.getLyricsToDisplay();
+                const suggestedWords = lyrics.split(' ');
+                
+                const wordsClass = this.validateWords(
+                    correctWords, 
+                    suggestedWords, 
+                    suggestedLyrics.state
+                );
+                
+                const effect = this.determineEffect(wordsClass, correctWords.length);
 
-                const isFreeze = wordsClass.filter(c => c === 'freeze').length > 0;
-                const isBad = wordsClass.filter(c => c === 'bad').length > 0;
-                const isGood = wordsClass.filter(c => c === 'good').length === correctWords.length;
+                this.setState({ wordsClass });
 
-                let effect = '';
-                if (isFreeze) { 
-                    effect = 'freeze';
-                } else if (isBad) {
-                    effect = 'bad';
-                } else if (isGood) {
-                    effect = 'good';
-                }
-
-                this.setState({
-                    ...this.state,
-                    wordsClass: wordsClass,
-                });
-
-                if (effect !== '') {
+                if (effect) {
                     this.props.colorFlash(effect);
                     this.props.jukebox(effect);
                 }
             }
         }
-    }
+    } 
 
     load() {
         this.reset();
@@ -94,30 +90,35 @@ export default class Song extends React.Component {
         const parts = this.props.song.guess_timecode.split(':');
         this.guessTimecode = Math.floor((parseInt(parts[0]) * 60 + parseFloat(parts[1]))*1000);
 
-        this.audioSource.current.src = this.props.song.files.music;
-        this.audio.current.load();
-
-        const audioReadyCb = this.handleAudioReady.bind(this);
-        this.audio.current.addEventListener('canplay', event => {
-            audioReadyCb();
-        });
-
-        const timeUpdateCb = this.handleTimecodeUpdate.bind(this);
-        this.audio.current.addEventListener('timeupdate', event => {
-            timeUpdateCb();
-        });
-
-        this.loadLrcFile();
+        fetch(`http://localhost:4001/api/song/${this.props.song.id}`)
+            .then(response => response.json())
+            .then(data => {
+                // Process lyrics
+                this.lyrics = data.lyrics.map(item => ({
+                    timecode: Math.floor(item.timecode),
+                    content: item.content
+                }));
+                
+                // Update Spotify player
+                if (this.spotifyController) {
+                    this.spotifyController.loadUri(data.track.uri);
+                }
+                
+                this.setState({ lyricsReady: true, audioReady: true });
+            })
+            .catch(error => {
+                console.error('Error loading song data:', error);
+            });
     }
 
     reset() {
-        this.props.jukebox('');
-
-        if (this.audio.current) {
-            this.audio.current.pause();
+        if (this.isFirstMount) {
+            this.props.jukebox('');
+            this.isFirstMount = false;
         }
-        if (this.musicBedTimeout) {
-            clearTimeout(this.musicBedTimeout);
+
+        if (this.spotifyController) {
+            this.spotifyController.destroy();
         }
         this.lyrics = [];
         this.setState({
@@ -127,27 +128,10 @@ export default class Song extends React.Component {
         });
     }
 
-    handleAudioReady() {
-        this.setState({
-            ...this.state,
-            audioReady: true,
-        });
-        this.startPlaying();
-    }
-    
-    handleLyricsReady() {
-        this.setState({
-            ...this.state,
-            lyricsReady: true,
-        });
-        this.startPlaying();
-    }
-
-    handleTimecodeUpdate() {
-        if (!this.audio.current)
+    handleLyricsTimecodeUpdate(timecode) {
+        if (!this.spotifyController)
             return;
 
-        const timecode = Math.floor(this.audio.current.currentTime * 1000);
         const i = this.state.currentLine; 
         const nextCt = (i + 1 < this.lyrics.length) ? this.lyrics[i+1].timecode : Number.MAX_VALUE;
 
@@ -158,9 +142,8 @@ export default class Song extends React.Component {
             });
         }
 
-        // if (this.guessTimecode < timecode) {
         if (this.state.currentLine >= this.props.song.guess_line) {
-            this.audio.current.pause();
+            this.spotifyController.pause();
             const timeoutCb = () => {
                 this.props.jukebox('bed');
             };
@@ -168,80 +151,121 @@ export default class Song extends React.Component {
         }
     }
 
-    loadLrcFile(file) {
-        const songId = this.props.song.id;
-        
-        fetch(`http://localhost:4001/api/lyrics/${songId}`)
-            .then(response => response.json())
-            .then(data => {
-                this.lyrics = data.map(item => ({
-                    timecode: Math.floor(item.timecode),
-                    content: item.content
-                }));
-                this.handleLyricsReady();
-            })
-            .catch(error => {
-                console.error('Error loading lyrics:', error);
-            });
-    }
-
     startPlaying() {
-        if (!this.state.audioReady || !this.state.lyricsReady)
-            return
+        if (!this.state.audioReady || !this.state.lyricsReady) {
+            return;
+        }
 
-        if (this.audio.current) {
-            this.audio.current.play();
+        if (this.spotifyController) {
+            this.spotifyController.play();
         }
     }
 
     render() {
-        const header = (<TextBox className="song-info">
-            <div className="song-title">{this.props.song.title}</div>
-            <div className="song-artist">{this.props.song.artist}</div>
-        </TextBox>);
+        return (
+            <>
+                <div id="spotify-player"></div>
+                {this.renderHeader()}
+                {this.renderLyrics()}
+            </>
+        );
+    }
 
-        const suggestedLyrics = this.props.suggestedLyrics;
+    renderHeader() {
+        return (
+            <TextBox className="song-info">
+                <div className="song-title">{this.props.song.title}</div>
+                <div className="song-artist">{this.props.song.artist}</div>
+            </TextBox>
+        );
+    }
 
-        if (suggestedLyrics.state !== STATE_LYRICS_NONE && this.props.song.guess_line === this.state.currentLine) {
-            const previousLine = this.lyrics[this.state.currentLine - 1].content;
-            const correctWords = this.lyrics[this.state.currentLine].content.split(' ');
-            let lyrics = suggestedLyrics.content;
-            if (suggestedLyrics.state === STATE_LYRICS_REVEAL) {
-                lyrics = this.lyrics[this.state.currentLine].content;
-            }
-            console.log(suggestedLyrics)
-            console.log(lyrics)
-            const words = lyrics.split(' ').map((w, i) => {
-                return (
-                    <span className={`lyrics-word ${this.state.wordsClass[i]}`} key={`word-${i}`}>{`${w} `}</span>
-                )
-            });
-            return (
-                <>
-                    {header}
-                    <div>
-                        <TextBox content={previousLine}></TextBox>
-                        <TextBox>{words}</TextBox>
-                    </div>
-                </>
-            )
+    renderLyrics() {
+        if (this.shouldShowSuggestedLyrics()) {
+            return this.renderSuggestedLyrics();
         }
+        return this.renderNormalLyrics();
+    }
 
-        let content = ' ';
-        if (this.state.currentLine >= 0) {
-            content = this.lyrics[this.state.currentLine].content;
-        }
+    shouldShowSuggestedLyrics() {
+        const { suggestedLyrics, song } = this.props;
+        return suggestedLyrics.state !== STATE_LYRICS_NONE && 
+               song.guess_line === this.state.currentLine;
+    }
 
+    renderSuggestedLyrics() {
+        const previousLine = this.lyrics[this.state.currentLine - 1].content;
+        const lyrics = this.getLyricsToDisplay();
+        const words = this.renderWords(lyrics);
+
+        return (
+            <div>
+                <TextBox content={previousLine}></TextBox>
+                <TextBox>{words}</TextBox>
+            </div>
+        );
+    }
+
+    getLyricsToDisplay() {
+        const { suggestedLyrics } = this.props;
+        return suggestedLyrics.state === STATE_LYRICS_REVEAL 
+            ? this.lyrics[this.state.currentLine].content 
+            : suggestedLyrics.content;
+    }
+
+    renderWords(lyrics) {
+        return lyrics.split(' ').map((word, index) => (
+            <span 
+                className={`lyrics-word ${this.state.wordsClass[index]}`} 
+                key={`word-${index}`}
+            >
+                {`${word} `}
+            </span>
+        ));
+    }
+
+    renderNormalLyrics() {
+        const content = this.state.currentLine >= 0 
+            ? this.lyrics[this.state.currentLine].content 
+            : ' ';
         const hidden = this.props.song.guess_line === this.state.currentLine;
 
         return (
-            <>
-                <audio ref={this.audio}>
-                    <source ref={this.audioSource} src=""></source>
-                </audio>
-                { header }
-                <TextBox content={content} hidden={hidden} className="song-lyrics" ></TextBox>
-            </>
-        )
+            <TextBox 
+                content={content} 
+                hidden={hidden} 
+                className="song-lyrics" 
+            />
+        );
+    }
+
+    validateWords(correctWords, suggestedWords, state) {
+        return suggestedWords.map((word, index) => {
+            if (state === STATE_LYRICS_FROZEN) {
+                return 'freeze';
+            }
+            if (state === STATE_LYRICS_VALIDATE) {
+                return this.getWordValidationClass(word, correctWords[index]);
+            }
+            return '';
+        });
+    }
+
+    getWordValidationClass(suggestedWord, correctWord) {
+        if (!correctWord) return 'bad';
+        return suggestedWord.toUpperCase() === correctWord.toUpperCase() 
+            ? 'good' 
+            : 'bad';
+    }
+
+    determineEffect(wordsClass, correctWordsLength) {
+        const isFreeze = wordsClass.includes('freeze');
+        const isBad = wordsClass.includes('bad');
+        const isGood = wordsClass.filter(c => c === 'good').length === correctWordsLength;
+
+        if (isFreeze) return 'freeze';
+        if (isBad) return 'bad';
+        if (isGood) return 'good';
+        return '';
     }
 }

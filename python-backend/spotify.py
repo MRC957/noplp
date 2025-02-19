@@ -3,6 +3,7 @@ import sys
 import requests
 import base64
 from os import getenv
+import urllib.parse
 
 from enum import Enum
 from datetime import datetime, timedelta
@@ -90,9 +91,70 @@ class SpotifyDriver:
         track_id = items[0].get('id')
         df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
 
+        # Get preview URL from the track data
+        preview_url = items[0].get('preview_url')
+        if not preview_url:
+            raise RuntimeError(f"No preview URL available for track {track_id}")
 
-        return items[0], df_lyrics
+        return {
+            'track': items[0],
+            'lyrics': df_lyrics,
+            'preview_url': preview_url
+        }
     
+    @refresh_login
+    def get_track(self, track_id):
+        url = f"{self.BASE_API_ADDRESS}/tracks/{track_id}"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+        }
+        rsp = requests.get(url, headers=headers)
+
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to get track from spotify: {rsp.json()}")
+
+        track = rsp.json()
+        df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
+        
+        return {
+            'track': track,
+            'lyrics': df_lyrics,
+            # 'uri': f"spotify:track:{track_id}"  # Replace preview_url with uri
+        }
+
+    def get_auth_url(self):
+        scope = "streaming user-read-email user-read-private"
+        redirect_uri = "http://localhost:3000/callback"
+        auth_url = f"{self.BASE_AUTH_ADDRESS}/authorize"
+        params = {
+            "client_id": self.client_id,
+            "response_type": "code",
+            "scope": scope,
+            "redirect_uri": redirect_uri
+        }
+        return f"{auth_url}?{urllib.parse.urlencode(params)}"
+
+    def get_user_token(self, code):
+        redirect_uri = "http://localhost:3000/callback"
+        url = f"{self.BASE_AUTH_ADDRESS}{self.TOKEN_URI}"
+        auth_payload = f"{self.client_id}:{self.client_secret}"
+        
+        headers = {
+            "Authorization": f"Basic {base64.b64encode(auth_payload.encode('ascii')).decode('ascii')}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        data = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri
+        }
+        
+        rsp = requests.post(url, headers=headers, data=data)
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to get user token: {rsp.json()}")
+            
+        return rsp.json()
 
 class SpotifyLyricsDriver:
     def __init__(self) -> None:

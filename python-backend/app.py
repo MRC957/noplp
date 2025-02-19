@@ -4,6 +4,7 @@ from flask_cors import CORS
 import os
 import json
 import pandas as pd
+from spotify import SpotifyDriver
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
@@ -38,28 +39,34 @@ def get_playlist():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/lyrics/<song_id>', methods=['GET'])
-def get_lyrics(song_id):
+@app.route('/api/song/<song_id>', methods=['GET'])
+def get_song(song_id):
     try:
-        # Assuming CSV files are stored with song_id as filename
-        csv_path = f'client/public/lyrics/{song_id}.csv'
-        
-        # Read CSV file using pandas
-        df = pd.read_csv(csv_path).fillna("")
-        mapping_columns = {
-            "words": "content",
-            "startTimeMs": "timecode"
-        }
-        df.rename(columns=mapping_columns, inplace=True)
-        df = df.astype({'timecode': 'int32'})
-
-
-        # Convert DataFrame to list of records
-        lyrics = df.to_dict(orient='records')
-
-        return jsonify(lyrics)
+        spotify = SpotifyDriver()
+        song_data = spotify.get_track(song_id)
+        song_data['lyrics'] = song_data['lyrics'].to_dict(orient='records')
+        return jsonify(song_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# @app.route('/api/lyrics/<song_id>', methods=['GET'])
+# def get_lyrics(song_id):
+#     try:
+#         spotify = SpotifyDriver()
+#         song_data = spotify.get_track(song_id)
+        
+#         df = song_data['lyrics']
+#         mapping_columns = {
+#             "words": "content",
+#             "startTimeMs": "timecode"
+#         }
+#         df.rename(columns=mapping_columns, inplace=True)
+#         df = df.astype({'timecode': 'int32'})
+
+#         lyrics = df.to_dict(orient='records')
+#         return jsonify(lyrics)
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 @socketio.on('connect')
 def handle_connect():
@@ -109,6 +116,25 @@ def handle_reveal_lyrics():
 @socketio.on('set-perf-mode')
 def handle_set_perf_mode(args):
     emit('set-perf-mode', args, room='karaoke', skip_sid=request.sid)
+
+@app.route('/api/spotify/auth', methods=['GET'])
+def get_spotify_auth():
+    try:
+        spotify = SpotifyDriver()
+        auth_url = spotify.get_auth_url()
+        return jsonify({"url": auth_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify/token', methods=['POST'])
+def get_spotify_token():
+    try:
+        code = request.json.get('code')
+        spotify = SpotifyDriver()
+        token_info = spotify.get_user_token(code)
+        return jsonify(token_info)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('REACT_APP_WEBSOCKET_SERVER', '4001').split(':')[-1])

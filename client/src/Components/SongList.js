@@ -1,18 +1,18 @@
 import React from "react";
 import TextBox from "./TextBox";
-
 import './SongList.css';
 
-export default function SongList(props) {
-    props.jukebox('bed');
+export default function SongList({ title, songs }) {
     return (
         <>
-            <TextBox content={props.title} className="category-name"></TextBox>
-            {props.songs.map((song, i) => (<TextBox disabled={song.picked} key={i} >
-                    <div>{song.title} </div>
-                    <div className="song-artist">{song.artist} </div>
+            <TextBox content={title} className="category-name"></TextBox>
+            {songs.map((song, i) => (
+                <TextBox disabled={song.picked} key={i}>
+                    <div>{song.title}</div>
+                    <div className="song-artist">{song.artist}</div>
                     <div className="song-artist">{song.year}</div>
-                </TextBox>))}
+                </TextBox>
+            ))}
         </>
-    )
+    );
 }

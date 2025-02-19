@@ -1,12 +1,16 @@
 import React from 'react';
 import TextBox from './TextBox';
 
-export default function Categories(props) {
-    props.jukebox('bed');
+export default function Categories({ categories }) {
     return (
         <>
-            {props.categories.map((category, i) => 
-                <TextBox content={category.name} disabled={category.picked} key={category.id} />)}
+            {categories.map((category, i) => 
+                <TextBox 
+                    content={category.name} 
+                    disabled={category.picked} 
+                    key={category.id} 
+                />
+            )}
         </>
-    )
+    );
 }

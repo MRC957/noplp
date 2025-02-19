@@ -21,3 +21,11 @@ docker run --rm -p 8080:8080 noplp
 ```
 
 Depuis un navigateur (Firefox) : [http://localhost:8080](http://localhost:8080) affichera l'interface de jeu.  [http://localhost:8080/controller](http://localhost:8080/controller) affichera l'interface de commande (regie).
+
+
+TODO:
+- Store songs + lyrics inside a database
+- Implement song player from Spotify instead of .mp3 player
+- Add a "playlist refresh" interface
+- Missed lyrics are chosen randomly based on the difficulty level
+- Populate song database (via Groq or Google)
