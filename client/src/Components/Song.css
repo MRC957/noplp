@@ -40,3 +40,47 @@
     height: 100px;
     width: 100%;
 }
+
+.lyrics-container {
+    margin-top: 20px;
+    padding: 15px;
+    max-height: 300px;
+    overflow: hidden;
+}
+
+.lyrics-header {
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.lyrics-scroll-area {
+    overflow-y: auto;
+    max-height: 250px;
+    padding: 10px;
+}
+
+.lyrics-line {
+    margin: 8px 0;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+    font-size: 14px;
+}
+
+.lyrics-line.active {
+    font-weight: bold;
+    opacity: 1;
+    font-size: 16px;
+    color: #1DB954; /* Spotify green */
+}
+
+.lyrics-loading, .lyrics-error, .lyrics-empty {
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+}
+
+.lyrics-error {
+    color: #ff5252;
+}

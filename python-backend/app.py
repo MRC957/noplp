@@ -4,7 +4,7 @@ from flask_cors import CORS
 import os
 import json
 import pandas as pd
-from spotify import SpotifyDriver
+from spotify import SpotifyDriver, SpotifyLyricsDriver
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
@@ -48,6 +48,36 @@ def get_song(song_id):
         return jsonify(song_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/getLyrics/<track_id>/<words_to_guess>', methods=['GET'])
+def get_lyrics(track_id, words_to_guess=5):
+    """Return lyrics for a given track_id as a list of couples (timecodeMs, content)"""
+    try:
+        list_lyrics = {}
+        df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
+        list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
+        list_lyrics["lyricsToGuess"] = extract_lyric_to_guess(df_lyrics, words_to_guess=int(words_to_guess)).to_dict(orient='records')
+        return jsonify(list_lyrics)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def extract_lyric_to_guess(df, words_to_guess=5):
+    """Extract the lyrics to guess from the lyrics dataframe"""
+
+
+    # Count the number of words in each line separated by a space " " or a " ' "
+    df['word_count'] = df['words'].apply(lambda x: len(x.replace("'", " ").split()))
+
+    # Choose a random row where word_count is greater than 'nb_missing_lyrics after the 10 first lyrics
+    min_song_duration = 20000 # Guess after min 20 seconds
+    df_reduced = df[df["startTimeMs"] > min_song_duration]
+    guess_candidates = df_reduced[df_reduced['word_count'] > words_to_guess]
+    if guess_candidates.empty:
+        return extract_lyric_to_guess(df, words_to_guess-1)
+    else:
+        return guess_candidates.iloc[:1] # TODO: remove because only to accelerate testing
+        return guess_candidates.sample(1)
+
 
 # @app.route('/api/lyrics/<song_id>', methods=['GET'])
 # def get_lyrics(song_id):

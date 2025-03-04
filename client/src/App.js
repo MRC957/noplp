@@ -4,7 +4,7 @@ import { BrowserRouter as Router,Routes, Route } from 'react-router-dom';
 import './App.css'
 import TerminalComponent from "./Components/TerminalComponent";
 import ControllerComponent from "./Components/ControllerComponent";
-import SpotifyUI from "./Components/SpotifyUI";
+// import SpotifyUI from "./Components/SpotifyUI";
 import SpotifyUIIframe from "./Components/SpotifyUIIframe";
 
 
@@ -15,7 +15,7 @@ function App() {
                 <Routes>
                     <Route exact path="/" element={<TerminalComponent />} />
                     <Route exact path="/controller" element={<ControllerComponent />} />
-                    <Route exact path="/spotify" element={<SpotifyUI />} />
+                    {/* <Route exact path="/spotify" element={<SpotifyUI />} /> */}
                     <Route exact path="/spotifyiframe" element={<SpotifyUIIframe />} />
                 </Routes>
             </div>

@@ -104,20 +104,20 @@ class SpotifyDriver:
     
     @refresh_login
     def get_track(self, track_id):
-        url = f"{self.BASE_API_ADDRESS}/tracks/{track_id}"
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-        }
-        rsp = requests.get(url, headers=headers)
+        # url = f"{self.BASE_API_ADDRESS}/tracks/{track_id}"
+        # headers = {
+        #     "Authorization": f"Bearer {self.token}",
+        # }
+        # rsp = requests.get(url, headers=headers)
 
-        if rsp.status_code > 299:
-            raise RuntimeError(f"Failed to get track from spotify: {rsp.json()}")
+        # if rsp.status_code > 299:
+        #     raise RuntimeError(f"Failed to get track from spotify: {rsp.json()}")
 
-        track = rsp.json()
+        # track = rsp.json()
         df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
         
         return {
-            'track': track,
+            # 'track': track,
             'lyrics': df_lyrics,
             # 'uri': f"spotify:track:{track_id}"  # Replace preview_url with uri
         }
@@ -222,14 +222,14 @@ class SpotifyLyricsDriver:
 
         import pandas as pd
         df = pd.DataFrame(rsp.json()["lyrics"]["lines"])
-        df = df[["startTimeMs", "words"]]
+        df = df[["startTimeMs", "words"]].astype({"startTimeMs": int})
         return df
     
-        # Count the number of words in each line separated by a space " " or a " ' "
-        df['word_count'] = df['words'].apply(lambda x: len(x.replace("'", " ").split()))
+        # # Count the number of words in each line separated by a space " " or a " ' "
+        # df['word_count'] = df['words'].apply(lambda x: len(x.replace("'", " ").split()))
 
-        # Choose a random row where word_count is greater than 'nb_missing_lyrics after the 10 first lyrics
-        nb_missing_lyrics = 5
-        df_reduced = df[10:]
-        missing_lyrics = df_reduced[df_reduced['word_count'] > nb_missing_lyrics].sample(1)
-        return df
+        # # Choose a random row where word_count is greater than 'nb_missing_lyrics after the 10 first lyrics
+        # nb_missing_lyrics = 5
+        # df_reduced = df[10:]
+        # missing_lyrics = df_reduced[df_reduced['word_count'] > nb_missing_lyrics].sample(1)
+        # return df
