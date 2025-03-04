@@ -1,12 +1,13 @@
 import React from "react";
 import TextBox from "./TextBox";
+import SpotifyController from '../services/SpotifyController';
 
 import "./Song.css";
 
 export const STATE_LYRICS_NONE = 'none';
 export const STATE_LYRICS_SUGGESTED = 'suggested';
 export const STATE_LYRICS_FROZEN = 'frozen';
-export const STATE_LYRICS_VALIDATE = ' validate';
+export const STATE_LYRICS_VALIDATE = 'validate';
 export const STATE_LYRICS_REVEAL = 'reveal';
 
 export default class Song extends React.Component {
@@ -18,118 +19,98 @@ export default class Song extends React.Component {
             currentLine: -1,
             wordsClass: [],
         };
-        this.spotifyPlayer = React.createRef();
         this.lyrics = [];
         this.guessTimecode = 0;
         this.musicBedTimeout = null;
-        this.isFirstMount = true;
     }
 
     componentDidMount() {
-        this.load();
+        this.setupSpotifyListeners();
+        SpotifyController.initialize().then(() => {
+            this.load();
+        });
+    }
 
-        // window.onSpotifyIframeApiReady = (IFrameAPI) => {
-        //     const element = document.getElementById('spotify-player');
-        //     const options = {
-        //         width: '100%',
-        //         height: '100',
-        //     };
-        //     const callback = (EmbedController) => {
-        //         this.spotifyController = EmbedController;
-        //         EmbedController.addListener('playback_update', (e) => {
-        //             if (e.data.position) {
-        //                 this.handleLyricsTimecodeUpdate(e.data.position * 1000);
-        //             }
-        //         });
-        //     };
-        //     IFrameAPI.createController(element, options, callback);
-        // };
-
-        // // Load Spotify Embed SDK
-        // const script = document.createElement('script');
-        // script.src = 'https://open.spotify.com/embed-podcast/iframe-api/v1';
-        // script.async = true;
-        // document.body.appendChild(script);
+    componentWillUnmount() {
+        this.cleanup();
     }
 
     componentDidUpdate(prevProps) {
+        // Handle song change
         if (this.props.song.id !== prevProps.song.id) {
-            // this.reset();
             this.load();
         }
-        this.startPlaying();
 
-        const suggestedLyrics = this.props.suggestedLyrics;
-        if (suggestedLyrics.state !== prevProps.suggestedLyrics.state) {
-            if (this.shouldShowSuggestedLyrics()) {
-                const correctWords = this.lyrics[this.state.currentLine].content.split(' ');
-                const lyrics = this.getLyricsToDisplay();
-                const suggestedWords = lyrics.split(' ');
-                
-                const wordsClass = this.validateWords(
-                    correctWords, 
-                    suggestedWords, 
-                    suggestedLyrics.state
-                );
-                
-                const effect = this.determineEffect(wordsClass, correctWords.length);
-
-                this.setState({ wordsClass });
-
-                if (effect) {
-                    this.props.colorFlash(effect);
-                    this.props.jukebox(effect);
-                }
-            }
+        // Handle lyrics state changes
+        if (this.props.suggestedLyrics.state !== prevProps.suggestedLyrics.state) {
+            this.handleLyricsStateChange();
         }
-    } 
+
+        // Start playing when both audio and lyrics are ready
+        if ((!prevProps.audioReady || !prevProps.lyricsReady) &&
+            this.state.audioReady && this.state.lyricsReady) {
+            this.startPlaying();
+        }
+    }
+
+    setupSpotifyListeners() {
+        SpotifyController.onReady(() => {
+            this.setState({ audioReady: true });
+        });
+
+        SpotifyController.onPosition((position) => {
+            this.handleLyricsTimecodeUpdate(position);
+        });
+
+        SpotifyController.onError(() => {
+            this.setState({ audioReady: false });
+        });
+    }
+
+    cleanup() {
+        if (this.musicBedTimeout) {
+            clearTimeout(this.musicBedTimeout);
+            this.musicBedTimeout = null;
+        }
+        SpotifyController.reset();
+    }
 
     load() {
-        this.reset();
+        this.cleanup();
+        this.setState({
+            audioReady: false,
+            lyricsReady: false,
+            currentLine: -1,
+            wordsClass: [],
+        });
 
         const parts = this.props.song.guess_timecode.split(':');
-        this.guessTimecode = Math.floor((parseInt(parts[0]) * 60 + parseFloat(parts[1]))*1000);
+        this.guessTimecode = Math.floor((parseInt(parts[0]) * 60 + parseFloat(parts[1])) * 1000);
 
         fetch(`http://localhost:4001/api/song/${this.props.song.id}`)
             .then(response => response.json())
             .then(data => {
-                // Process lyrics
                 this.lyrics = data.lyrics.map(item => ({
                     timecode: Math.floor(item.timecode),
                     content: item.content
                 }));
                 
-                // Update Spotify player
-                if (this.spotifyController) {
-                    this.spotifyController.loadUri(data.track.uri);
-                }
-                
-                this.setState({ lyricsReady: true, audioReady: true });
+                SpotifyController.loadUri(data.track.uri)
+                    .then(() => {
+                        this.setState({ lyricsReady: true });
+                    })
+                    .catch(error => {
+                        console.error('Error loading track:', error);
+                        this.setState({ audioReady: false });
+                    });
             })
             .catch(error => {
                 console.error('Error loading song data:', error);
             });
     }
 
-    reset() {
-        if (this.isFirstMount) {
-            this.props.jukebox('');
-            this.isFirstMount = false;
-        }
-
-        if (this.spotifyController) {
-            this.spotifyController.destroy();
-        }
-        this.lyrics = [];
-        this.setState({
-            audioReady: false,
-            lyricsReady: false,
-            currentLine: -1,
-        });
-    }
-
     handleLyricsTimecodeUpdate(timecode) {
-        if (!this.spotifyController)
+        if (!SpotifyController.controller)
             return;
 
         const i = this.state.currentLine; 
@@ -143,7 +124,7 @@ export default class Song extends React.Component {
         }
 
         if (this.state.currentLine >= this.props.song.guess_line) {
-            this.spotifyController.pause();
+            SpotifyController.pause();
             const timeoutCb = () => {
                 this.props.jukebox('bed');
             };
@@ -156,9 +137,11 @@ export default class Song extends React.Component {
             return;
         }
 
-        if (this.spotifyController) {
-            this.spotifyController.play();
-        }
+        SpotifyController.play()
+            .catch(error => {
+                console.error('Error playing track:', error);
+                this.setState({ audioReady: false });
+            });
     }
 
     render() {
@@ -267,5 +250,29 @@ export default class Song extends React.Component {
         if (isBad) return 'bad';
         if (isGood) return 'good';
         return '';
+    }
+
+    handleLyricsStateChange() {
+        const suggestedLyrics = this.props.suggestedLyrics;
+        if (this.shouldShowSuggestedLyrics()) {
+            const correctWords = this.lyrics[this.state.currentLine].content.split(' ');
+            const lyrics = this.getLyricsToDisplay();
+            const suggestedWords = lyrics.split(' ');
+            
+            const wordsClass = this.validateWords(
+                correctWords, 
+                suggestedWords, 
+                suggestedLyrics.state
+            );
+            
+            const effect = this.determineEffect(wordsClass, correctWords.length);
+
+            this.setState({ wordsClass });
+
+            if (effect) {
+                this.props.colorFlash(effect);
+                this.props.jukebox(effect);
+            }
+        }
     }
 }
