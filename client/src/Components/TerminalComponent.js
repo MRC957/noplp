@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSocket } from '../hooks/useSocket';
 import { useAudio } from '../hooks/useAudio';
 import { STATES } from '../constants/states';
@@ -18,60 +18,97 @@ const COMPONENT_SOUNDS = {
 };
 
 const TerminalComponent = () => {
-  const [state, setState] = useState({
-    current: STATES.LOADING,
-    suggestedLyrics: {
-      content: '',
-      state: STATE_LYRICS_NONE,
-    },
-    payload: {},
+  // Track current app state
+  const [currentState, setCurrentState] = useState(STATES.LOADING);
+  
+  // Use ref to track the actual current state value for event handlers
+  const currentStateRef = useRef(currentState);
+  
+  // Update ref whenever currentState changes
+  useEffect(() => {
+    currentStateRef.current = currentState;
+  }, [currentState]);
+  
+  // Track UI state properties
+  const [uiState, setUiState] = useState({
     backgroundType: '',
     perfMode: false,
+    payload: {},
+  });
+  
+  // Track lyrics state separately
+  const [suggestedLyrics, setSuggestedLyrics] = useState({
+    content: '',
+    state: STATE_LYRICS_NONE,
   });
 
   const { socket } = useSocket();
-  const { playSound } = useAudio();
+  const { playSound, stopAllSounds } = useAudio();
 
   const handleFlashColor = (color) => {
-    setState(prev => ({ ...prev, backgroundType: color }));
+    setUiState(prev => ({ ...prev, backgroundType: color }));
   };
 
   const switchTo = (action, payload = {}) => {
-    setState(prev => {
-      if (prev.current !== action) {
-        const soundToPlay = COMPONENT_SOUNDS[action];
-        if (soundToPlay) {
-          playSound(soundToPlay);
-        }
+    console.log(`Switching to ${action}`, payload);
+    
+    // Stop current sounds when switching to song component
+    if (action === STATES.SONG) {
+      stopAllSounds();
+    }
+    // Play sound for other components as needed
+    else if (currentState !== action) {
+      const soundToPlay = COMPONENT_SOUNDS[action];
+      if (soundToPlay) {
+        playSound(soundToPlay);
       }
+    }
 
-      return {
-        ...prev,
-        payload,
-        current: action,
-        backgroundType: '',
-        suggestedLyrics: {
-          content: '',
-          state: STATE_LYRICS_NONE,
-        }
-      };
-    });
+    // Log the payload if it contains a track_id (for debugging)
+    if (action === STATES.SONG && payload.track_id) {
+      console.log(`Received song with track_id: ${payload.track_id}`);
+    }
+
+    // Update state
+    setCurrentState(action);
+    setUiState(prev => ({
+      ...prev,
+      payload,
+      backgroundType: '',
+    }));
+
+    // Reset suggested lyrics when switching components
+    if (action !== STATES.SONG) {
+      setSuggestedLyrics({
+        content: '',
+        state: STATE_LYRICS_NONE,
+      });
+    }
   };
 
-  const handleSuggestedLyrics = (lyricsState, payload) => {
-    if (state.current !== STATES.SONG) return;
+  const handleSuggestedLyrics = (lyricsState, payload = '') => {
+    // Use ref to get the most up-to-date state value
+    if (currentStateRef.current !== STATES.SONG) {
+      console.warn(`Lyrics update received while not in SONG state. Current state: ${currentStateRef.current}`);
+      return;
+    }
     
-    setState(prev => ({
-      ...prev,
-      suggestedLyrics: {
-        content: lyricsState === STATE_LYRICS_SUGGESTED ? payload : prev.suggestedLyrics.content,
-        state: lyricsState,
-      },
+    console.log(`Handling lyrics state: ${lyricsState} with payload:`, payload);
+    
+    // For suggested state, we need to keep the content from the payload
+    // For other states, we want to maintain the previous content but change the state
+    setSuggestedLyrics(prev => ({
+      content: lyricsState === STATE_LYRICS_SUGGESTED ? payload : prev.content,
+      state: lyricsState,
     }));
   };
 
+  // Set up socket listeners
   useEffect(() => {
     if (!socket) return;
+
+    // Clean up previous listeners first to avoid duplicates
+    socket.removeAllListeners();
 
     socket.on('to-intro', () => {
       switchTo(STATES.INTRO);
@@ -94,28 +131,40 @@ const TerminalComponent = () => {
     });
 
     socket.on('freeze-lyrics', () => {
-      handleSuggestedLyrics(STATE_LYRICS_FROZEN, '');
+      handleSuggestedLyrics(STATE_LYRICS_FROZEN);
     });
 
     socket.on('validate-lyrics', () => {
-      handleSuggestedLyrics(STATE_LYRICS_VALIDATE, '');
+      handleSuggestedLyrics(STATE_LYRICS_VALIDATE);
     });
 
     socket.on('reveal-lyrics', () => {
-      handleSuggestedLyrics(STATE_LYRICS_REVEAL, '');
+      handleSuggestedLyrics(STATE_LYRICS_REVEAL);
     });
 
     socket.on('set-perf-mode', data => {
-      setState(prev => ({ ...prev, perfMode: data }));
+      setUiState(prev => ({ ...prev, perfMode: data }));
     });
 
     return () => {
       socket.removeAllListeners();
     };
-  }, [socket]);
+  }, [socket]); // Only depend on socket, not currentState
+
+  // For debugging - log state changes
+  useEffect(() => {
+    console.log(`App state changed to: ${currentState}`);
+  }, [currentState]);
+
+  // For debugging - log lyrics state changes
+  useEffect(() => {
+    if (suggestedLyrics.state !== STATE_LYRICS_NONE) {
+      console.log(`Lyrics state updated to: ${suggestedLyrics.state}`, suggestedLyrics.content ? 'with content' : 'without content');
+    }
+  }, [suggestedLyrics]);
 
   const renderContent = () => {
-    switch (state.current) {
+    switch (currentState) {
       case STATES.LOADING:
         return (
           <div className="waiting">
@@ -128,23 +177,23 @@ const TerminalComponent = () => {
       case STATES.SONGLIST:
         return (
           <SongList 
-            title={state.payload.name} 
-            songs={state.payload.songs} 
+            title={uiState.payload.name} 
+            songs={uiState.payload.songs} 
           />
         );
       case STATES.SONG:
         return (
           <Song 
             colorFlash={handleFlashColor}
-            song={state.payload}
-            suggestedLyrics={state.suggestedLyrics}
+            song={uiState.payload}
+            suggestedLyrics={suggestedLyrics}
             jukebox={playSound}
           />
         );
       case STATES.CATEGORIES:
         return (
           <Categories 
-            categories={state.payload} 
+            categories={uiState.payload} 
           />
         );
       default:
@@ -154,8 +203,8 @@ const TerminalComponent = () => {
 
   return (
     <>
-      {state.current !== STATES.LOADING && (
-        <Background effect={state.backgroundType} perfMode={state.perfMode} />
+      {currentState !== STATES.LOADING && (
+        <Background effect={uiState.backgroundType} perfMode={uiState.perfMode} />
       )}
       <div>
         {renderContent()}

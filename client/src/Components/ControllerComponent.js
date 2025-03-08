@@ -15,6 +15,7 @@ export default class ControllerComponent extends ClientComponent {
             pickedCategories: [],
             proposedLyrics: '',
             expectedWords: 0,
+            trackId: ''
         };
 
         this.handleToIntro = this.handleToIntro.bind(this);
@@ -29,6 +30,7 @@ export default class ControllerComponent extends ClientComponent {
         this.handleLyricsValidate = this.handleLyricsValidate.bind(this);
         this.handleLyricsReveal = this.handleLyricsReveal.bind(this);
         this.handlePerfModeToggle = this.handlePerfModeToggle.bind(this);
+        this.handleTrackIdChange = this.handleTrackIdChange.bind(this);
     }
 
     componentDidMount() {
@@ -45,16 +47,6 @@ export default class ControllerComponent extends ClientComponent {
             });
     }
 
-    // componentDidMount() {
-    //     super.componentDidMount();
-    //     // load playlist
-    //     const playlistCb = this.setPlaylist.bind(this);
-    //     this.socket.emit('get-playlist', (response) => {
-    //         playlistCb(response);
-    //     });
-    //     console.log(response);
-    // }
-
     setPlaylist(data) {
         this.setState({
             ...this.state,
@@ -68,7 +60,8 @@ export default class ControllerComponent extends ClientComponent {
             ...this.state,
             ffaMode: false,
             pickedSongs: [],
-            pickedCategories: []
+            pickedCategories: [],
+            trackId: ''
         });
     }
 
@@ -140,15 +133,29 @@ export default class ControllerComponent extends ClientComponent {
         console.log(this.state);
         const song = this.state.playlist.songs.find(song => song.id === id);
         console.log('goto song', song);
+        
         if (this.state.ffaMode) {
             song.guess_line = 9000;
             song.guess_timecode = '99:00.00';
         }
+        
+        // Add track_id to the song object if it's available
+        if (this.state.trackId) {
+            song.track_id = this.state.trackId;
+        }
+        
         this.socket.emit('goto-song', song);
         this.setState({
             ...this.state,
             expectedWords: song.expected_words || 0
         })
+    }
+
+    handleTrackIdChange(evt) {
+        this.setState({
+            ...this.state,
+            trackId: evt.target.value
+        });
     }
 
     handleProposeLyrics() {
@@ -211,6 +218,24 @@ export default class ControllerComponent extends ClientComponent {
                 </div>
                 <button onClick={this.handleToIntro}>To intro</button>
                 <button onClick={this.handleToCategories}>To Categories</button>
+                
+                <div className="track-id-form">
+                    <div className="form-group">
+                        <label htmlFor="trackId">Spotify Track ID:</label>
+                        <input 
+                            id="trackId"
+                            type="text" 
+                            placeholder="Enter Spotify Track ID" 
+                            value={this.state.trackId}
+                            onChange={this.handleTrackIdChange}
+                            className="track-id-input"
+                        />
+                    </div>
+                    <div className="helper-text">
+                        This track ID will be sent with the next song
+                    </div>
+                </div>
+                
                 <div className="lyrics-form">
                     <input  placeholder={`${this.state.expectedWords} mots attendu`} 
                             ref={el => this.proposedLyricsRef = el} 
@@ -223,8 +248,6 @@ export default class ControllerComponent extends ClientComponent {
                     </div>
                 </div>
                 {categoriesElements}
-
-
             </div>
         )
     }

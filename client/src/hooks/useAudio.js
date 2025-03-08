@@ -41,6 +41,17 @@ export const useAudio = () => {
     }
   }, []);
 
+  const stopAllSounds = useCallback(() => {
+    // Stop all sounds in the sound refs
+    Object.values(soundRefs).forEach(({ ref }) => {
+      if (ref.current) {
+        ref.current.pause();
+        ref.current.currentTime = 0;
+      }
+    });
+    currentSound.current = null;
+  }, []);
+
   const playSound = useCallback((sound) => {
     if (!sound) {
       stopCurrentSound();
@@ -68,8 +79,8 @@ export const useAudio = () => {
     }
   }, [stopCurrentSound]);
 
-  // No need for AudioElements component anymore
-  return { playSound };
+  // Return both playSound and stopAllSounds functions
+  return { playSound, stopAllSounds };
 
   // Clean up on app unmount (if needed)
   useEffect(() => {
@@ -84,4 +95,4 @@ export const useAudio = () => {
       audioContainer.remove();
     };
   }, []);
-}; 
+};

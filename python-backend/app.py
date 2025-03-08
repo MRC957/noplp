@@ -49,10 +49,14 @@ def get_song(song_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+DEFAULT_WORDS_TO_GUESS = 5
+
 @app.route('/api/getLyrics/<track_id>/<words_to_guess>', methods=['GET'])
 def get_lyrics(track_id, words_to_guess=5):
     """Return lyrics for a given track_id as a list of couples (timecodeMs, content)"""
     try:
+        if not isinstance(words_to_guess, int): 
+            words_to_guess = DEFAULT_WORDS_TO_GUESS
         list_lyrics = {}
         df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
         list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
@@ -71,8 +75,13 @@ def extract_lyric_to_guess(df, words_to_guess=5):
     # Choose a random row where word_count is greater than 'nb_missing_lyrics after the 10 first lyrics
     min_song_duration = 20000 # Guess after min 20 seconds
     df_reduced = df[df["startTimeMs"] > min_song_duration]
-    guess_candidates = df_reduced[df_reduced['word_count'] > words_to_guess]
+    guess_candidates = df_reduced[df_reduced['word_count'] == words_to_guess]
+
+    # Add condition to discard when MORE than words_to_guess
+
     if guess_candidates.empty:
+        if words_to_guess == 1 :
+            return guess_candidates.iloc[:1]
         return extract_lyric_to_guess(df, words_to_guess-1)
     else:
         return guess_candidates.iloc[:1] # TODO: remove because only to accelerate testing
