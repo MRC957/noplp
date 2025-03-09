@@ -29,17 +29,64 @@ export const getSocket = () => {
       console.error('Socket connection error:', error);
     });
 
-    // Add to window for global access (useful for debugging and functional components)
+    // Add to window for global access (useful for debugging)
     window.socket = socket;
   }
   
   return socket;
 };
 
+// Dedicated socket entities with specific methods for each component type
+export const controllerSocket = {
+  // Navigation methods
+  showIntro: () => emitEvent('show-intro'),
+  showCategories: (categories) => emitEvent('show-categories', categories),
+  showSongList: (data) => emitEvent('show-song-list', data),
+  gotoSong: (song) => emitEvent('goto-song', song),
+  
+  // Lyrics control methods
+  proposeLyrics: (lyrics) => emitEvent('propose-lyrics', lyrics),
+  freezeLyrics: () => emitEvent('freeze-lyrics'),
+  validateLyrics: () => emitEvent('validate-lyrics'),
+  revealLyrics: () => emitEvent('reveal-lyrics'),
+  continueLyrics: () => emitEvent('continue-lyrics'),
+  
+  // Mode settings
+  setPerfMode: (mode) => emitEvent('set-perf-mode', mode),
+  
+  // Event listeners
+  onLyricsValidationResult: (callback) => {
+    const socketInstance = getSocket();
+    if (socketInstance) {
+      socketInstance.on('lyrics-validation-result', callback);
+      return true;
+    }
+    return false;
+  },
+  
+  // Remove event listeners
+  offLyricsValidationResult: () => {
+    const socketInstance = getSocket();
+    if (socketInstance) {
+      socketInstance.off('lyrics-validation-result');
+      return true;
+    }
+    return false;
+  }
+};
+
+export const songSocket = {
+  // Send lyrics validation results to the server (and thus to controllers)
+  sendLyricsValidationResult: (songId, isCorrect) => {
+    return emitEvent('lyrics-validation-result', { songId, isCorrect });
+  }
+};
+
+// General emitter function used by the dedicated socket entities
 export const emitEvent = (eventName, data) => {
   const socketInstance = getSocket();
   if (socketInstance) {
-    console.log(`Emitting ${eventName} event with data:`, data);
+    console.log(`Emitting ${eventName} event:`, data || 'no data');
     socketInstance.emit(eventName, data);
     return true;
   }
@@ -49,5 +96,7 @@ export const emitEvent = (eventName, data) => {
 
 export default {
   getSocket,
+  controllerSocket,
+  songSocket,
   emitEvent
 };

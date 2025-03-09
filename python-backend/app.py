@@ -29,12 +29,11 @@ def get_playlist():
         with open('client/public/playlist.json', 'r') as f:
             playlist = json.load(f)
             
-        # Update the lyrics file path to point to CSV instead of LRC
-        # for song in playlist['songs']:
-        #     if 'files' in song:
-        #         # Change extension from .lrc to .csv
-        #         song['files']['lyrics'] = song['files']['lyrics'].replace('.lrc', '.csv')
-                
+        for cat in playlist['categories']:
+            for song in playlist['songs']:
+                if song["category"] == cat["id"]:
+                    song["expected_words"] = cat["expected_words"]
+
         return jsonify(playlist)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -55,20 +54,21 @@ DEFAULT_WORDS_TO_GUESS = 5
 def get_lyrics(track_id, words_to_guess=5):
     """Return lyrics for a given track_id as a list of couples (timecodeMs, content)"""
     try:
-        if not isinstance(words_to_guess, int): 
+        try: 
+            words_to_guess = int(words_to_guess)
+        except ValueError:
             words_to_guess = DEFAULT_WORDS_TO_GUESS
         list_lyrics = {}
         df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
         list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
-        list_lyrics["lyricsToGuess"] = extract_lyric_to_guess(df_lyrics, words_to_guess=int(words_to_guess)).to_dict(orient='records')
+        list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(df_lyrics, words_to_guess=int(words_to_guess))
+        list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
         return jsonify(list_lyrics)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 def extract_lyric_to_guess(df, words_to_guess=5):
     """Extract the lyrics to guess from the lyrics dataframe"""
-
-
     # Count the number of words in each line separated by a space " " or a " ' "
     df['word_count'] = df['words'].apply(lambda x: len(x.replace("'", " ").split()))
 
@@ -78,34 +78,13 @@ def extract_lyric_to_guess(df, words_to_guess=5):
     guess_candidates = df_reduced[df_reduced['word_count'] == words_to_guess]
 
     # Add condition to discard when MORE than words_to_guess
-
     if guess_candidates.empty:
         if words_to_guess == 1 :
-            return guess_candidates.iloc[:1]
+            return guess_candidates.iloc[:1], words_to_guess
         return extract_lyric_to_guess(df, words_to_guess-1)
     else:
-        return guess_candidates.iloc[:1] # TODO: remove because only to accelerate testing
-        return guess_candidates.sample(1)
-
-
-# @app.route('/api/lyrics/<song_id>', methods=['GET'])
-# def get_lyrics(song_id):
-#     try:
-#         spotify = SpotifyDriver()
-#         song_data = spotify.get_track(song_id)
-        
-#         df = song_data['lyrics']
-#         mapping_columns = {
-#             "words": "content",
-#             "startTimeMs": "timecode"
-#         }
-#         df.rename(columns=mapping_columns, inplace=True)
-#         df = df.astype({'timecode': 'int32'})
-
-#         lyrics = df.to_dict(orient='records')
-#         return jsonify(lyrics)
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
+        # return guess_candidates.iloc[:1] # TODO: remove because only to accelerate testing
+        return guess_candidates.sample(1), words_to_guess
 
 @socketio.on('connect')
 def handle_connect():
@@ -153,8 +132,15 @@ def handle_reveal_lyrics():
     emit('reveal-lyrics', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('continue-lyrics')
-def handle_reveal_lyrics():
+def handle_continue_lyrics():
     emit('continue-lyrics', room='karaoke', skip_sid=request.sid)
+
+# New handler for lyrics validation result from Song to Controller
+@socketio.on('lyrics-validation-result')
+def handle_lyrics_validation_result(data):
+    print(f"Lyrics validation result: {data}")
+    # Broadcast to all clients in the room except the sender
+    emit('lyrics-validation-result', data, room='karaoke', include_self=False)
 
 @socketio.on('set-perf-mode')
 def handle_set_perf_mode(args):
