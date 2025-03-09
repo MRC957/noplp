@@ -1,5 +1,5 @@
 import React from "react";
-import socketIOClient from "socket.io-client";
+import { getSocket } from "../hooks/socketManager";
 
 import "./ClientComponent.css"
 
@@ -10,15 +10,16 @@ export default class ClientComponent extends React.Component {
     }
 
     componentDidMount() {
-        // Install communication
+        // Use the shared socket instance from socketManager
         if (this.socket === null) {
-            console.log('Open connexion to', process.env.REACT_APP_WEBSOCKET_SERVER);
-            this.socket = socketIOClient(process.env.REACT_APP_WEBSOCKET_SERVER);
+            console.log('Getting shared socket connection from socketManager');
+            this.socket = getSocket();
         }
     }
 
     componentWillUnmount() {
-        if (this.state.socket)
-            this.state.socket.disconnect();
+        // We don't disconnect the socket here since it's shared
+        // The socket will be managed by the socketManager
+        this.socket = null;
     }
 }

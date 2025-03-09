@@ -79,6 +79,17 @@ button {
     flex: 1;
 }
 
+/* Song button styling based on validation status */
+button.success {
+    background-color: #4CAF50; /* Green for success */
+    color: white;
+}
+
+button.failure {
+    background-color: #f44336; /* Red for failure */
+    color: white;
+}
+
 .category .title {
     flex: 1;
     background-color: rgb(99, 144, 212);

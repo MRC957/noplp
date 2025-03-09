@@ -15,7 +15,8 @@ export default class ControllerComponent extends ClientComponent {
             pickedCategories: [],
             proposedLyrics: '',
             expectedWords: 0,
-            trackId: ''
+            trackId: '',
+            songResults: {} // Track validation results for each song
         };
 
         this.handleToIntro = this.handleToIntro.bind(this);
@@ -29,6 +30,7 @@ export default class ControllerComponent extends ClientComponent {
         this.handleLyricsFreeze = this.handleLyricsFreeze.bind(this);
         this.handleLyricsValidate = this.handleLyricsValidate.bind(this);
         this.handleLyricsReveal = this.handleLyricsReveal.bind(this);
+        this.handleLyricsContinue = this.handleLyricsContinue.bind(this);
         this.handlePerfModeToggle = this.handlePerfModeToggle.bind(this);
         this.handleTrackIdChange = this.handleTrackIdChange.bind(this);
     }
@@ -45,6 +47,21 @@ export default class ControllerComponent extends ClientComponent {
             .catch(error => {
                 console.error('Error fetching playlist:', error);
             });
+
+        // Listen for lyric validation results
+        this.socket.on('lyrics-validation-result', (data) => {
+            const { songId, isCorrect } = data;
+            if (songId) {
+                this.setState(prevState => ({
+                    ...prevState,
+                    songResults: {
+                        ...prevState.songResults,
+                        [songId]: isCorrect
+                    }
+                }));
+                console.log(`Updated song result for ${songId}: ${isCorrect}`);
+            }
+        });
     }
 
     setPlaylist(data) {
@@ -61,7 +78,8 @@ export default class ControllerComponent extends ClientComponent {
             ffaMode: false,
             pickedSongs: [],
             pickedCategories: [],
-            trackId: ''
+            trackId: '',
+            songResults: {} // Reset song results on reset
         });
     }
 
@@ -184,6 +202,10 @@ export default class ControllerComponent extends ClientComponent {
         this.socket.emit('reveal-lyrics');
     }
 
+    handleLyricsContinue() {
+        this.socket.emit('continue-lyrics');
+    }
+
     render() {
         const songList = this.state.playlist.songs || [];
         const categories = (this.state.playlist.categories || []).map(c => {
@@ -195,7 +217,21 @@ export default class ControllerComponent extends ClientComponent {
 
         const categoriesElements = categories.map(cat => {
             const songsElements = cat.songs.map(song => {
-                return (<button key={song.id} onClick={() => this.handleToSong(song.id)}>Go to "{song.title}"</button>)
+                // Determine button class based on validation result
+                let buttonClass = '';
+                if (this.state.songResults.hasOwnProperty(song.id)) {
+                    buttonClass = this.state.songResults[song.id] ? 'success' : 'failure';
+                }
+                
+                return (
+                    <button 
+                        key={song.id} 
+                        className={buttonClass}
+                        onClick={() => this.handleToSong(song.id)}
+                    >
+                        Go to "{song.title}"
+                    </button>
+                )
             }); 
             return (
                 <div className="category" key={`category-${cat.id}`}>
@@ -244,7 +280,8 @@ export default class ControllerComponent extends ClientComponent {
                         <button onClick={this.handleProposeLyrics} disabled={!canPropose}>Propose Lyrics</button>
                         <button onClick={this.handleLyricsFreeze} disabled={!canPropose}>Freeze</button>
                         <button onClick={this.handleLyricsValidate} disabled={!canPropose}>Validate</button>
-                        <button onClick={this.handleLyricsReveal} disabled={!canPropose}>Reveal</button>
+                        <button onClick={this.handleLyricsReveal}>Reveal</button>
+                        <button onClick={this.handleLyricsContinue}>Continue</button>
                     </div>
                 </div>
                 {categoriesElements}

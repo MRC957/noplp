@@ -6,7 +6,7 @@ import Background from "./Background";
 import Categories from "./Categories";
 import Logo from "./Logo";
 import Song, { STATE_LYRICS_FROZEN, STATE_LYRICS_NONE, STATE_LYRICS_VALIDATE, 
-  STATE_LYRICS_SUGGESTED, STATE_LYRICS_REVEAL } from "./Song";
+  STATE_LYRICS_SUGGESTED, STATE_LYRICS_REVEAL, STATE_LYRICS_CONTINUE } from "./Song";
 import SongList from "./SongList";
 
 const COMPONENT_SOUNDS = {
@@ -100,6 +100,8 @@ const TerminalComponent = () => {
     setSuggestedLyrics(prev => ({
       content: lyricsState === STATE_LYRICS_SUGGESTED ? payload : prev.content,
       state: lyricsState,
+      // Store line index for continue functionality
+      lineIndex: lyricsState === STATE_LYRICS_CONTINUE ? prev.lineIndex : undefined
     }));
   };
 
@@ -140,6 +142,10 @@ const TerminalComponent = () => {
 
     socket.on('reveal-lyrics', () => {
       handleSuggestedLyrics(STATE_LYRICS_REVEAL);
+    });
+    
+    socket.on('continue-lyrics', () => {
+      handleSuggestedLyrics(STATE_LYRICS_CONTINUE);
     });
 
     socket.on('set-perf-mode', data => {

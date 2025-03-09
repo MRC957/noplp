@@ -152,6 +152,10 @@ def handle_freeze_lyrics():
 def handle_reveal_lyrics():
     emit('reveal-lyrics', room='karaoke', skip_sid=request.sid)
 
+@socketio.on('continue-lyrics')
+def handle_reveal_lyrics():
+    emit('continue-lyrics', room='karaoke', skip_sid=request.sid)
+
 @socketio.on('set-perf-mode')
 def handle_set_perf_mode(args):
     emit('set-perf-mode', args, room='karaoke', skip_sid=request.sid)

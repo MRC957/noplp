@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import TextBox from "./TextBox";
 import "./Song.css";
+import { emitEvent } from "../hooks/socketManager";
 
 // Lyric state constants
 export const STATE_LYRICS_NONE = 'none';
@@ -8,6 +9,7 @@ export const STATE_LYRICS_SUGGESTED = 'suggested';
 export const STATE_LYRICS_FROZEN = 'frozen';
 export const STATE_LYRICS_VALIDATE = 'validate';
 export const STATE_LYRICS_REVEAL = 'reveal';
+export const STATE_LYRICS_CONTINUE = 'continue';
 
 const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   // Player and audio states
@@ -29,6 +31,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     currentLyricIndex: -1,
     lyricsLoading: false,
     lyricsError: null,
+    revealedLyrics: [],     // Track revealed lyrics to avoid pausing for them again
   });
 
   // Add a ref to always track the current lyrics state
@@ -38,13 +41,96 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   useEffect(() => {
     lyricsStateRef.current = lyricsState;
   }, [lyricsState]);
+
+  // Track the previous lyrics state to detect changes
+  const previousLyricStateRef = useRef(STATE_LYRICS_NONE);
   
-  // Internal suggested lyrics state - will be updated from props
-  const [suggestedLyricsState, setSuggestedLyricsState] = useState({
-    content: '',
-    state: STATE_LYRICS_NONE,
-    wordsClass: []
-  });
+  // Effect to play sounds when lyric state changes
+  useEffect(() => {
+    if (!suggestedLyrics || !jukebox) return;
+    
+    const currentState = suggestedLyrics.state;
+    const prevState = previousLyricStateRef.current;
+    
+    // Only play sounds if the state has changed
+    if (currentState !== prevState) {
+      switch (currentState) {
+        case STATE_LYRICS_FROZEN:
+          jukebox('freeze');
+          break;
+        case STATE_LYRICS_VALIDATE:
+          // We'll check if the answer is correct in the validation logic
+          // and play either 'good' or 'bad' accordingly
+          const isCorrect = checkIfLyricsAreCorrect();
+          jukebox(isCorrect ? 'good' : 'bad');
+          
+          // Emit validation result using our socket manager
+          if (song && song.id) {
+            emitEvent('lyrics-validation-result', {
+              songId: song.id,
+              isCorrect: isCorrect
+            });
+          }
+          break;
+        case STATE_LYRICS_REVEAL:
+          jukebox('good');
+          // When lyrics are revealed, add them to the revealedLyrics array
+          if (lyricsState.currentLyricIndex >= 0) {
+            const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
+            if (currentLyric) {
+              setLyricsState(prev => ({
+                ...prev,
+                revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
+              }));
+            }
+          }
+          break;
+        case STATE_LYRICS_CONTINUE:
+          // Resume playback when continue is triggered
+          resumePlayback();
+          // Also mark current lyric as revealed if not already done
+          if (lyricsState.currentLyricIndex >= 0) {
+            const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
+            if (currentLyric && !lyricsState.revealedLyrics.includes(currentLyric.startTimeMs)) {
+              setLyricsState(prev => ({
+                ...prev,
+                revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
+              }));
+            }
+          }
+          break;
+        default:
+          break;
+      }
+      
+      // Update the previous state reference
+      previousLyricStateRef.current = currentState;
+    }
+  }, [suggestedLyrics?.state, jukebox]);
+
+  // Function to check if the suggested lyrics are correct
+  const checkIfLyricsAreCorrect = () => {
+    if (!suggestedLyrics || !suggestedLyrics.content || !lyricsState.lyricsToGuess.length) {
+      return false;
+    }
+
+    const currentLyricIndex = lyricsState.currentLyricIndex;
+    if (currentLyricIndex < 0) return false;
+    
+    // Get the current lyric line
+    const currentLine = lyricsState.lyrics[currentLyricIndex];
+    if (!currentLine) return false;
+
+    // Find the corresponding guess entry
+    const guessEntry = lyricsState.lyricsToGuess.find(g => g.startTimeMs === currentLine.startTimeMs);
+    if (!guessEntry || !guessEntry.words) return false;
+
+    // Compare the suggested lyrics with the correct ones
+    const suggestedWords = suggestedLyrics.content.toLowerCase().trim();
+    const correctWords = guessEntry.words.toLowerCase().trim();
+    
+    return suggestedWords === correctWords;
+  };
 
   // Track pending song load
   const [pendingTrackId, setPendingTrackId] = useState(null);
@@ -55,28 +141,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   const playerContainerRef = useRef(null);
   const musicBedTimeoutRef = useRef(null);
   const pauseOffsetRef = useRef(500);
-
-  // Update internal state when suggestedLyrics props change
-  useEffect(() => {
-    if (suggestedLyrics) {
-      console.log("Received new suggested lyrics prop:", suggestedLyrics.state);
-      
-      // Update our internal state from props
-      setSuggestedLyricsState(prev => ({
-        ...prev,
-        content: suggestedLyrics.content,
-        state: suggestedLyrics.state,
-      }));
-    }
-  }, [suggestedLyrics]);
-
-  // Effect for handling lyrics state changes and applying visual effects
-  useEffect(() => {
-    if (suggestedLyricsState.state !== STATE_LYRICS_NONE && 
-        lyricsState.currentLyricIndex >= 0) {
-      handleLyricsStateChange();
-    }
-  }, [suggestedLyricsState.state, lyricsState.currentLyricIndex]);
+  const preventRepeatedPauseRef = useRef(false); // Prevent immediate re-pause
 
   // Load Spotify iframe API
   useEffect(() => {
@@ -194,12 +259,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       currentLyricIndex: -1,
       lyricsLoading: true,
       lyricsError: null,
-    });
-    
-    setSuggestedLyricsState({
-      content: '',
-      state: STATE_LYRICS_NONE,
-      wordsClass: []
+      revealedLyrics: [], // Reset revealed lyrics for new song
     });
     
     if (!song) {
@@ -320,7 +380,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   // Update displayed lyrics based on current time
   const updateDisplayedLyrics = (currentTime, controller) => {
     // Use the ref to get the latest lyrics state
-    const { lyrics, currentLyricIndex, lyricsToGuess } = lyricsStateRef.current;
+    const { lyrics, currentLyricIndex, lyricsToGuess, revealedLyrics } = lyricsStateRef.current;
     
     if (!lyrics || lyrics.length === 0) {
       console.log("No lyrics available yet in updateDisplayedLyrics");
@@ -344,13 +404,22 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     }
 
     // Check for upcoming guessable lyrics to pause for
-    if (!playerState.pausedForGuessing && controller) {
+    if (!playerState.pausedForGuessing && controller && !preventRepeatedPauseRef.current) {
         for (let i = 0; i < lyrics.length; i++) {
-            const timeUntilLyric = lyrics[i].startTimeMs - currentTime;
+            const lyricStartTime = lyrics[i].startTimeMs;
+            const timeUntilLyric = lyricStartTime - currentTime;
             
+            // Check if this lyric is close enough to pause
             if (timeUntilLyric > 0 && timeUntilLyric <= pauseOffsetRef.current) {
-                if (lyricsToGuess.some(g => g.startTimeMs === lyrics[i].startTimeMs)) {
-                    console.log(`Pausing before lyric with words to guess`);
+                // Only process if this line contains lyrics to guess
+                if (lyricsToGuess.some(g => g.startTimeMs === lyricStartTime)) {
+                    // Skip if this lyric has been previously revealed
+                    if (revealedLyrics.includes(lyricStartTime)) {
+                        console.log(`Skipping already revealed lyric at ${lyricStartTime}`);
+                        continue;
+                    }
+
+                    console.log(`Pausing before lyric with words to guess at time ${lyricStartTime}`);
                     controller.pause();
                     
                     setPlayerState(prev => ({ ...prev, pausedForGuessing: true }));
@@ -360,7 +429,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
                     musicBedTimeoutRef.current = setTimeout(() => {
                         jukebox('bed');
                     }, 1000);
-
+                    
                     break;
                 }
             }
@@ -378,6 +447,36 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     spotifyControllerRef.current.play()
   };
 
+  // Resume playback after lyrics reveal
+  const resumePlayback = () => {
+    if (spotifyControllerRef.current && playerState.pausedForGuessing) {
+      console.log("Resuming playback after lyrics reveal");
+      
+      // Clear any music bed that might be playing
+      if (musicBedTimeoutRef.current) {
+        clearTimeout(musicBedTimeoutRef.current);
+        musicBedTimeoutRef.current = null;
+      }
+      
+      // Stop bed music
+      jukebox('stop');
+      
+      // Set flag to prevent immediate re-pause
+      preventRepeatedPauseRef.current = true;
+      
+      // Reset the flag after a short delay to allow playback to continue
+      setTimeout(() => {
+        preventRepeatedPauseRef.current = false;
+      }, 1000);
+      
+      // Resume playback
+      spotifyControllerRef.current.resume();
+      
+      // Update state to indicate we're no longer paused for guessing
+      setPlayerState(prev => ({ ...prev, pausedForGuessing: false }));
+    }
+  };
+
   // Format time for display
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -386,133 +485,22 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Handle lyrics state changes
-  const handleLyricsStateChange = () => {
-    const { lyrics, currentLine } = lyricsState;
-    const { state, content } = suggestedLyricsState;
-    
-    if (shouldShowSuggestedLyrics()) {
-      if (lyrics.length === 0 || currentLine < 0) return;
-      
-      const correctWords = lyrics[currentLine].content.split(' ');
-      const suggestedWords = content.split(' ');
-      
-      const wordsClass = validateWords(correctWords, suggestedWords, state);
-      
-      setSuggestedLyricsState(prev => ({
-        ...prev,
-        wordsClass
-      }));
-      
-      const effect = determineEffect(wordsClass, correctWords.length);
-      if (effect) {
-        colorFlash(effect);
-        jukebox(effect);
-      }
-    }
-  };
-
-  // Check if suggested lyrics should be shown
-  const shouldShowSuggestedLyrics = () => {
-    return suggestedLyricsState.state !== STATE_LYRICS_NONE && 
-           song?.guess_line === lyricsState.currentLine;
-  };
-
-  // Validate words compared to the correct lyrics
-  const validateWords = (correctWords, suggestedWords, state) => {
-    return suggestedWords.map((word, index) => {
-      if (state === STATE_LYRICS_FROZEN) {
-        return 'freeze';
-      }
-      if (state === STATE_LYRICS_VALIDATE) {
-        return getWordValidationClass(word, correctWords[index]);
-      }
-      return '';
-    });
-  };
-
-  // Get validation class for a word
-  const getWordValidationClass = (suggestedWord, correctWord) => {
-    if (!correctWord) return 'bad';
-    return suggestedWord.toUpperCase() === correctWord.toUpperCase() 
-      ? 'good' 
-      : 'bad';
-  };
-
-  // Determine effect based on word validation
-  const determineEffect = (wordsClass, correctWordsLength) => {
-    const isFreeze = wordsClass.includes('freeze');
-    const isBad = wordsClass.includes('bad');
-    const isGood = wordsClass.filter(c => c === 'good').length === correctWordsLength;
-    if (isFreeze) return 'freeze';
-    if (isBad) return 'bad';
-    if (isGood) return 'good';
-    return '';
-  };
-
-  // Render suggested lyrics
-  const renderSuggestedLyrics = () => {
-    const { lyrics, currentLine } = lyricsState;
-    
-    // Show previous line + suggested lyrics
-    if (currentLine <= 0 || lyrics.length === 0) {
-      return <TextBox content=" " />;
-    }
-    const previousLine = lyrics[currentLine - 1].content;
-    const LyricsToDisplay = getLyricsToDisplay();
-    const words = renderWords(LyricsToDisplay);
-    return (
-      <div>
-        <TextBox content={previousLine}></TextBox>
-        <TextBox>{words}</TextBox>
-      </div>
-    );
-  };
-
-  // Render words with appropriate classes
-  const renderWords = (lyrics) => {
-    if (!lyrics) return null;
-    
-    return lyrics.split(' ').map((word, index) => (
-      <span 
-        className={`lyrics-word ${suggestedLyricsState.wordsClass[index] || ''}`} 
-        key={`word-${index}`}
-      >
-        {`${word} `}
-      </span>
-    ));
-  };
-
-  // Get lyrics to display based on state
-  const getLyricsToDisplay = () => {
-    const { state, content } = suggestedLyricsState;
-    const { lyrics, currentLine } = lyricsState;
-    
-    if (currentLine < 0 || lyrics.length === 0) {
-      return "";
-    }
-    
-    return state === STATE_LYRICS_REVEAL 
-      ? lyrics[currentLine].content 
-      : content;
-  };
-
-  // Render suggested lyrics
-  const renderNormalLyrics = () => {
+  // Render lyrics with suggestion support
+  const renderLyrics = () => {
     const { lyrics, lyricsToGuess, currentLyricIndex, lyricsLoading, lyricsError } = lyricsState;
-
+    
     if (lyricsLoading) {
         return <TextBox className="lyrics-container"><div className="lyrics-loading">Loading lyrics...</div></TextBox>;
     }
-
+    
     if (lyricsError) {
         return <TextBox className="lyrics-container"><div className="lyrics-error">{lyricsError}</div></TextBox>;
     }
-
+    
     if (!lyrics || lyrics.length === 0) {
         return <TextBox className="lyrics-container"><div className="lyrics-empty">No lyrics available</div></TextBox>;
     }
-
+    
     // Find visible lyrics range
     const visibleWindow = 1;
     const startIdx = Math.max(0, currentLyricIndex - visibleWindow);
@@ -525,14 +513,14 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
         
         // Process line for display
         const guessEntry = lyricsToGuess.find(g => g.startTimeMs === line.startTimeMs);
-        let displayText = processLyricLine(line, guessEntry);
         
         visibleLyrics.push(
             <div 
                 key={i} 
-                className={`lyrics-line ${i === currentLyricIndex ? 'active' : ''} ${guessEntry ? 'guessable' : ''}`}
+                className={`lyrics-line ${i === currentLyricIndex ? 'active' : ''}`}
+                // className={`lyrics-line ${i === currentLyricIndex ? 'active' : ''} ${guessEntry ? 'guessable' : ''}`}
             >
-                {displayText}
+                {processLyricLine(line, guessEntry)}
             </div>
         );
     }
@@ -545,33 +533,132 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
             </div>
         </TextBox>
     );
-    };
+  };
 
-    const processLyricLine = (line, guessEntry) => {
-        if (!guessEntry) return line.words;
-        
-        const wordCount = guessEntry.word_count || 1;
-        const placeholder = '_ '.repeat(wordCount);
-        
-        if (guessEntry.words) {
-            return line.words.replace(guessEntry.words, placeholder);
-        }
-        
-        if (guessEntry.startIndex !== undefined && guessEntry.endIndex !== undefined) {
-            const before = line.words.substring(0, guessEntry.startIndex);
-            const after = line.words.substring(guessEntry.endIndex);
-            return before + placeholder + after;
-        }
-        
-        return placeholder;
-    };
-
-  // Render lyrics based on state
-  const renderLyrics = () => {
-    if (shouldShowSuggestedLyrics()) {
-      return renderSuggestedLyrics();
+  const processLyricLine = (line, guessEntry) => {
+    // If no guess entry, just show the lyrics as regular text
+    if (!guessEntry) {
+        return <span>{line.words}</span>;
     }
-    return renderNormalLyrics();
+    
+    // If we have suggested lyrics and at the current line with words to guess
+    if (suggestedLyrics && suggestedLyrics.state !== STATE_LYRICS_NONE && 
+        guessEntry && playerState.pausedForGuessing) {
+        
+        // Get the original words to guess
+        const originalWords = guessEntry.words || '';
+        const beforeText = line.words.substring(0, line.words.indexOf(originalWords));
+        const afterText = line.words.substring(line.words.indexOf(originalWords) + originalWords.length);
+        
+        // Handle different states of suggested lyrics
+        switch (suggestedLyrics.state) {
+            case STATE_LYRICS_SUGGESTED:
+                return (
+                    <>
+                        {beforeText}
+                        <span className="lyrics-word">
+                            {suggestedLyrics.content}
+                        </span>
+                        {afterText}
+                    </>
+                );
+            
+            case STATE_LYRICS_FROZEN:
+                return (
+                    <>
+                        {beforeText}
+                        <span className="lyrics-word freeze">
+                            {suggestedLyrics.content}
+                        </span>
+                        {afterText}
+                    </>
+                );
+            
+            case STATE_LYRICS_VALIDATE:
+                // Split both texts into words for comparison
+                const suggestedWords = suggestedLyrics.content.split(/\s+/);
+                const correctWords = originalWords.split(/\s+/);
+                
+                return (
+                    <>
+                        {beforeText}
+                        {suggestedWords.map((word, index) => {
+                            const isCorrect = index < correctWords.length && 
+                                            word.toLowerCase() === correctWords[index].toLowerCase();
+                            return (
+                                <span key={index} className={`lyrics-word ${isCorrect ? 'good' : 'bad'}`}>
+                                    {word}{index < suggestedWords.length - 1 ? ' ' : ''}
+                                </span>
+                            );
+                        })}
+                        {afterText}
+                    </>
+                );
+            
+            case STATE_LYRICS_REVEAL:
+            case STATE_LYRICS_CONTINUE:
+                return (
+                    <>
+                        {beforeText}
+                        <span className="lyrics-word good">
+                            {originalWords}
+                        </span>
+                        {afterText}
+                    </>
+                );
+            
+            default:
+                break;
+        }
+    }
+
+    // Check if this lyric has been revealed via continue state
+    const { revealedLyrics } = lyricsStateRef.current;
+    if (revealedLyrics.includes(line.startTimeMs)) {
+        const originalWords = guessEntry.words || '';
+        const beforeText = line.words.substring(0, line.words.indexOf(originalWords));
+        const afterText = line.words.substring(line.words.indexOf(originalWords) + originalWords.length);
+        
+        return (
+            <>
+                {beforeText}
+                <span className="lyrics-word shown">
+                    {originalWords}
+                </span>
+                {afterText}
+            </>
+        );
+    }
+    
+    // Default behavior - show placeholder for words to guess
+    const wordCount = guessEntry.word_count || 1;
+    const placeholder = '_ '.repeat(wordCount);
+    
+    if (guessEntry.words) {
+        const beforeText = line.words.substring(0, line.words.indexOf(guessEntry.words));
+        const afterText = line.words.substring(line.words.indexOf(guessEntry.words) + guessEntry.words.length);
+        return (
+            <>
+                {beforeText}
+                <span>{placeholder}</span>
+                {afterText}
+            </>
+        );
+    }
+    
+    if (guessEntry.startIndex !== undefined && guessEntry.endIndex !== undefined) {
+        const before = line.words.substring(0, guessEntry.startIndex);
+        const after = line.words.substring(guessEntry.endIndex);
+        return (
+            <>
+                {before}
+                <span>{placeholder}</span>
+                {after}
+            </>
+        );
+    }
+    
+    return <span>{placeholder}</span>;
   };
 
   // Render header with song info
@@ -608,14 +695,9 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       {playerState.errorMessage && <div className="error-message">{playerState.errorMessage}</div>}
       
       {renderHeader()}
-      {renderTimecode()}
+      {/* {renderTimecode()} */}
       {renderLyrics()}
-      
-      {playerState.pausedForGuessing && (
-        <TextBox className="guess-notice">
-          Playback paused: Fill in the missing words!
-        </TextBox>
-      )}
+
     </div>
   );
 };
