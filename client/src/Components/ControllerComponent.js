@@ -174,6 +174,35 @@ const ControllerComponent = () => {
         }));
     };
 
+    // New function to handle direct track submission
+    const handleSubmitTrack = () => {
+        if (!state.trackId.trim()) return;
+        
+        // Create a minimal song object
+        const song =  {
+            id: state.trackId,
+            track_id: state.trackId,
+            title: 'Unknown',
+            artist: 'Unknown',
+            expectedWords: 8
+        };
+        
+        if (state.ffaMode) {
+            song.guess_line = 9000;
+            song.guess_timecode = '99:00.00';
+        }
+        
+        console.log('submitting spotify track directly', song);
+        socket.current.emit('goto-song', song);
+
+        // Set initial expected words from the song data
+        // The actual value may be updated later by the server
+        setState(prevState => ({
+            ...prevState,
+            expectedWords: song.expected_words || 0
+        }));        
+    };
+
     const handleTrackIdChange = (evt) => {
         setState(prevState => ({
             ...prevState,
@@ -256,12 +285,12 @@ const ControllerComponent = () => {
     return (
         <div className="controller">
             <div className="service">
-                <button onClick={handleFfaToggle}>FFA {state.ffaMode? 'On' : 'Off'}</button>
-                <button onClick={handlePerfModeToggle}>Perf {state.perfMode? 'On' : 'Off'}</button>
+                {/* <button onClick={handleFfaToggle}>FFA {state.ffaMode? 'On' : 'Off'}</button>
+                <button onClick={handlePerfModeToggle}>Perf {state.perfMode? 'On' : 'Off'}</button> */}
+                <button onClick={handleToIntro}>To intro</button>
+                <button onClick={handleToCategories}>To Categories</button>
                 <button className="warn" onClick={handleReset}> RESET </button>
             </div>
-            <button onClick={handleToIntro}>To intro</button>
-            <button onClick={handleToCategories}>To Categories</button>
             
             <div className="track-id-form">
                 <div className="form-group">
@@ -274,9 +303,16 @@ const ControllerComponent = () => {
                         onChange={handleTrackIdChange}
                         className="track-id-input"
                     />
+                    <button 
+                        onClick={handleSubmitTrack} 
+                        disabled={!state.trackId.trim()} 
+                        className="track-id-submit"
+                    >
+                        Play Track
+                    </button>
                 </div>
                 <div className="helper-text">
-                    This track ID will be sent with the next song
+                    Enter a Spotify Track ID and click "Play Track" to play it directly
                 </div>
             </div>
             
