@@ -2,15 +2,16 @@ import React from "react";
 import TextBox from "./TextBox";
 import "./Song.css";
 
-// Import lyric state constants from the constants file
+// Import lyric state constants from the unified constants file
 import {
+  LYRICS_STATES,
   STATE_LYRICS_NONE,
   STATE_LYRICS_SUGGESTED,
   STATE_LYRICS_FROZEN,
   STATE_LYRICS_VALIDATE,
   STATE_LYRICS_REVEAL,
   STATE_LYRICS_CONTINUE
-} from '../constants/lyricsStates';
+} from '../constants/states';
 
 const LyricsDisplay = ({ 
   lyrics, 

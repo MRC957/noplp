@@ -5,15 +5,16 @@ import LyricsDisplay from "./LyricsDisplay";
 import SongHeader from "./SongHeader";
 import "./Song.css";
 
-// Import lyric state constants from the new constants file
+// Import lyric state constants from the unified constants file
 import {
+  LYRICS_STATES,
   STATE_LYRICS_NONE,
   STATE_LYRICS_SUGGESTED,
   STATE_LYRICS_FROZEN,
   STATE_LYRICS_VALIDATE,
   STATE_LYRICS_REVEAL,
   STATE_LYRICS_CONTINUE
-} from "../constants/lyricsStates";
+} from "../constants/states";
 
 const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   // Player and audio states

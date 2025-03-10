@@ -1,0 +1,107 @@
+{
+    "name": "AnnePy",
+    "categories": [
+        {
+            "id": "3394634a-29d0-40a6-bf24-5480acef9f00",
+            "name": "Émotion poussiéreuse",
+            "difficulty" : 50,
+            "expected_words" : 8
+        },
+        {
+            "id": "3394634a-29d0-40a6-bf24-5480acef9f01",
+            "name": "Casser la voix",
+            "difficulty" : 40,
+            "expected_words" : 6
+        },
+        {
+            "id": "3394634a-29d0-40a6-bf24-5480acef9f02",
+            "name": "La main verte",
+            "difficulty" : 30,
+            "expected_words" : 4
+        },
+        {
+            "id": "3394634a-29d0-40a6-bf24-5480acef9f03",
+            "name": "Nostalgie",
+            "difficulty" : 20,
+            "expected_words" : 3
+        },
+        {
+            "id": "3394634a-29d0-40a6-bf24-5480acef9f05",
+            "name": "Sang froid",
+            "difficulty" : 10,
+            "expected_words" : 2
+        }
+    ],
+    "songs": [
+        {
+            "id": "5mHG6QC2r02VhELkp8DZeI",
+            "track_id": "5mHG6QC2r02VhELkp8DZeI",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f00",
+            "artist": "Jacques Brel",
+            "title": "Quand on n'a que l'amour"
+        },
+        {
+            "id": "7wq9OgRHcvPdq7YNCUoCmJ",
+            "track_id": "7wq9OgRHcvPdq7YNCUoCmJ",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f00",
+            "artist": "Frédérique François",
+            "title": "Mon cœur te dit je t'aime"
+        },
+        {
+            "id": "5WGQYYrk9ITIT3PEOjtTBY",
+            "track_id": "5WGQYYrk9ITIT3PEOjtTBY",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f05",
+            "artist": "Zazie",
+            "title": "Zen"
+        },
+        {
+            "id": "7gHRVNiuL66Z6fE6DwZaFT",
+            "track_id": "7gHRVNiuL66Z6fE6DwZaFT",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f02",
+            "artist": "Henri Salvador",
+            "title": "Jardin d'Hiver"
+        },
+        {
+            "id": "2mT0YKSgM8ie4Irf0gkuPA",
+            "track_id": "2mT0YKSgM8ie4Irf0gkuPA",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f02",
+            "artist": "Vitaa",
+            "title": "A fleur de toi"
+        },
+        {
+            "id": "7wBGD8HGW91tnIlOTxrWN2",
+            "track_id": "7wBGD8HGW91tnIlOTxrWN2",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f03",
+            "artist": "Maxime Le Forestier",
+            "title": "Education sentimentale"
+        },
+        {
+            "id": "1fU9wVDi3yZrawv1Rc4vcS",
+            "track_id": "1fU9wVDi3yZrawv1Rc4vcS",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f05",
+            "artist": "Marc Lavoine",
+            "title": "Elle a les yeux revolver"
+        },
+        {
+            "id": "1MOSRjdAbUhvLNnHCdUEL5",
+            "track_id": "1MOSRjdAbUhvLNnHCdUEL5",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f03",
+            "artist": "Renaud",
+            "title": "Mistral Gagnant"
+        },
+        {
+            "id": "6y8iOWIs2Bzjmij2g5rRYv",
+            "track_id": "6y8iOWIs2Bzjmij2g5rRYv",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f01",
+            "artist": "Hoshi",
+            "title": "Et même après je t'aimerai"
+        },
+        {
+            "id": "6GKfnB8wQhmCqsHmgDAkN4",
+            "track_id": "6GKfnB8wQhmCqsHmgDAkN4",
+            "category": "3394634a-29d0-40a6-bf24-5480acef9f01",
+            "artist": "Patrick Bruel",
+            "title": "Casser la voix"
+        }
+    ]
+}

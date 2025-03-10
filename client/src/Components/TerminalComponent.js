@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSocket } from '../hooks/useSocket';
 import { useAudio } from '../hooks/useAudio';
-import { STATES } from '../constants/states';
-import Background from "./Background";
-import Categories from "./Categories";
-import Logo from "./Logo";
-import Song from "./Song";
-import SongList from "./SongList";
-import './TerminalComponent.css';
-
-// Import lyric states from the constants file instead of the Song component
-import {
+import { 
+  STATES, 
+  // Import both new object-based constants and legacy individual constants
+  LYRICS_STATES,
   STATE_LYRICS_NONE,
   STATE_LYRICS_SUGGESTED,
   STATE_LYRICS_FROZEN,
   STATE_LYRICS_VALIDATE, 
   STATE_LYRICS_REVEAL,
   STATE_LYRICS_CONTINUE
-} from '../constants/lyricsStates';
+} from '../constants/states';
+import Background from "./Background";
+import Categories from "./Categories";
+import Logo from "./Logo";
+import Song from "./Song";
+import SongList from "./SongList";
+import './TerminalComponent.css';
 
 const COMPONENT_SOUNDS = {
   [STATES.INTRO]: 'intro',
