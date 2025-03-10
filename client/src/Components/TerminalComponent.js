@@ -5,9 +5,19 @@ import { STATES } from '../constants/states';
 import Background from "./Background";
 import Categories from "./Categories";
 import Logo from "./Logo";
-import Song, { STATE_LYRICS_FROZEN, STATE_LYRICS_NONE, STATE_LYRICS_VALIDATE, 
-  STATE_LYRICS_SUGGESTED, STATE_LYRICS_REVEAL, STATE_LYRICS_CONTINUE } from "./Song";
+import Song from "./Song";
 import SongList from "./SongList";
+import './TerminalComponent.css';
+
+// Import lyric states from the constants file instead of the Song component
+import {
+  STATE_LYRICS_NONE,
+  STATE_LYRICS_SUGGESTED,
+  STATE_LYRICS_FROZEN,
+  STATE_LYRICS_VALIDATE, 
+  STATE_LYRICS_REVEAL,
+  STATE_LYRICS_CONTINUE
+} from '../constants/lyricsStates';
 
 const COMPONENT_SOUNDS = {
   [STATES.INTRO]: 'intro',
@@ -42,6 +52,9 @@ const TerminalComponent = () => {
     state: STATE_LYRICS_NONE,
   });
 
+  // Store previous song id to detect song changes
+  const previousSongIdRef = useRef(null);
+
   const { socket } = useSocket();
   const { playSound, stopAllSounds } = useAudio();
 
@@ -55,6 +68,15 @@ const TerminalComponent = () => {
     // Stop current sounds when switching to song component
     if (action === STATES.SONG) {
       stopAllSounds();
+
+      // Reset lyrics state if switching to a different song
+      if (payload.id !== previousSongIdRef.current) {
+        setSuggestedLyrics({
+          content: '',
+          state: STATE_LYRICS_NONE,
+        });
+        previousSongIdRef.current = payload.id;
+      }
     }
     // Play sound for other components as needed
     else if (currentState !== action) {
@@ -77,7 +99,7 @@ const TerminalComponent = () => {
       backgroundType: '',
     }));
 
-    // Reset suggested lyrics when switching components
+    // Reset suggested lyrics when switching to any non-song component
     if (action !== STATES.SONG) {
       setSuggestedLyrics({
         content: '',

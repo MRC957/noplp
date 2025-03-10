@@ -1,58 +1,33 @@
-import React from "react";
-
-import ClientComponent from "./ClientComponent";
-
+import React, { useState, useEffect, useRef } from "react";
+import { getSocket } from "../hooks/socketManager";
 import './ControllerComponent.css';
 
-export default class ControllerComponent extends ClientComponent {
-    constructor(props) { 
-        super(props);
-        this.state = {
-            playlist: {},
-            ffaMode: false,
-            perfMode: false,
-            pickedSongs: [],
-            pickedCategories: [],
-            proposedLyrics: '',
-            expectedWords: 0,
-            trackId: '',
-            songResults: {} // Track validation results for each song
-        };
+const ControllerComponent = () => {
+    const [state, setState] = useState({
+        playlist: {},
+        ffaMode: false,
+        perfMode: false,
+        pickedSongs: [],
+        pickedCategories: [],
+        proposedLyrics: '',
+        expectedWords: 0,
+        trackId: '',
+        songResults: {}
+    });
 
-        this.handleToIntro = this.handleToIntro.bind(this);
-        this.handleToSongList = this.handleToSongList.bind(this);
-        this.handleToSong = this.handleToSong.bind(this);
-        this.handleToCategories = this.handleToCategories.bind(this);
-        this.handleReset = this.handleReset.bind(this);
-        this.handleFfaToggle = this.handleFfaToggle.bind(this);
-        this.handleProposeLyrics = this.handleProposeLyrics.bind(this);
-        this.handleInput = this.handleInput.bind(this);
-        this.handleLyricsFreeze = this.handleLyricsFreeze.bind(this);
-        this.handleLyricsValidate = this.handleLyricsValidate.bind(this);
-        this.handleLyricsReveal = this.handleLyricsReveal.bind(this);
-        this.handleLyricsContinue = this.handleLyricsContinue.bind(this);
-        this.handlePerfModeToggle = this.handlePerfModeToggle.bind(this);
-        this.handleTrackIdChange = this.handleTrackIdChange.bind(this);
-    }
+    const proposedLyricsRef = useRef(null);
+    const socket = useRef(null);
 
-    componentDidMount() {
-        super.componentDidMount();
-        // load playlist
-        const playlistCb = this.setPlaylist.bind(this);
-        fetch('http://localhost:4001/api/playlist')
-            .then(response => response.json())
-            .then((data) => {
-                playlistCb(data);
-            })
-            .catch(error => {
-                console.error('Error fetching playlist:', error);
-            });
+    // Initialize socket
+    useEffect(() => {
+        console.log('Getting shared socket connection from socketManager');
+        socket.current = getSocket();
 
         // Listen for lyric validation results
-        this.socket.on('lyrics-validation-result', (data) => {
+        socket.current.on('lyrics-validation-result', (data) => {
             const { songId, isCorrect } = data;
             if (songId) {
-                this.setState(prevState => ({
+                setState(prevState => ({
                     ...prevState,
                     songResults: {
                         ...prevState.songResults,
@@ -62,230 +37,266 @@ export default class ControllerComponent extends ClientComponent {
                 console.log(`Updated song result for ${songId}: ${isCorrect}`);
             }
         });
-    }
 
-    setPlaylist(data) {
-        this.setState({
-            ...this.state,
-            playlist: data
+        // Listen for words_to_guess updates
+        socket.current.on('lyrics-words-count', (data) => {
+            if (data && typeof data.count === 'number') {
+                setState(prevState => ({
+                    ...prevState,
+                    expectedWords: data.count
+                }));
+                console.log(`Updated expected words count to: ${data.count}`);
+            }
         });
-    }
 
-    handleReset() {
+        // Load playlist
+        fetch('http://localhost:4001/api/playlist')
+            .then(response => response.json())
+            .then((data) => {
+                setState(prevState => ({
+                    ...prevState,
+                    playlist: data
+                }));
+            })
+            .catch(error => {
+                console.error('Error fetching playlist:', error);
+            });
+
+        // Cleanup function
+        return () => {
+            socket.current = null;
+        };
+    }, []);
+
+    const handleReset = () => {
         console.log('Reseting');
-        this.setState({
-            ...this.state,
+        setState(prevState => ({
+            ...prevState,
             ffaMode: false,
             pickedSongs: [],
             pickedCategories: [],
             trackId: '',
-            songResults: {} // Reset song results on reset
+            songResults: {}
+        }));
+    };
+
+    const handlePerfModeToggle = () => {
+        setState(prevState => {
+            const newPerfMode = !prevState.perfMode;
+            socket.current.emit('set-perf-mode', newPerfMode);
+            return {
+                ...prevState,
+                perfMode: newPerfMode
+            };
         });
-    }
+    };
 
-    handlePerfModeToggle() {
-        this.setState({
-            ...this.state,
-            perfMode: !this.state.perfMode
-        });
-        this.socket.emit('set-perf-mode', this.state.perfMode);
-    }
+    const handleFfaToggle = () => {
+        setState(prevState => ({
+            ...prevState,
+            ffaMode: !prevState.ffaMode
+        }));
+        console.log('handle ffa mode', !state.ffaMode);
+    };
 
-    handleFfaToggle() {
-        console.log('handle ffa mode', this.state.ffaMode);
-        this.setState({
-            ...this.state,
-            ffaMode: !this.state.ffaMode
-        });
-    }
+    const handleToIntro = () => {
+        socket.current.emit('show-intro');
+    };
 
-    handleToIntro() {
-        this.socket.emit('show-intro');
-    }
-
-    handleToCategories() {
-        const categories = this.state.playlist.categories.map(c => {
+    const handleToCategories = () => {
+        const categories = state.playlist.categories?.map(c => {
             return {
                 ...c,
-                picked: this.state.pickedCategories.indexOf(c.id) !== -1
+                picked: state.pickedCategories.indexOf(c.id) !== -1
             };
-        }).sort();
+        }).sort() || [];
         console.log(categories);
-        this.socket.emit('show-categories', categories);
-    }
+        socket.current.emit('show-categories', categories);
+    };
 
-    handleToSongList(categoryId) {
+    const handleToSongList = (categoryId) => {
         console.log(categoryId);
         if (categoryId) {
-            this.setState({
-                ...this.state,
-                pickedCategories: [...this.state.pickedCategories, categoryId]
-            });
+            setState(prevState => ({
+                ...prevState,
+                pickedCategories: [...prevState.pickedCategories, categoryId]
+            }));
         }
-        console.log(this.state)
-        const songs = this.state.playlist.songs.filter(s => {
-            return categoryId === undefined | s.category === categoryId;
+
+        const songs = state.playlist.songs?.filter(s => {
+            return categoryId === undefined || s.category === categoryId;
         }).map(s => {
-            console.log(s.id, this.state.pickedSongs, s.id in this.state.pickedSongs)
             return {
-                picked: this.state.pickedSongs.indexOf(s.id) !== -1,
+                picked: state.pickedSongs.indexOf(s.id) !== -1,
                 title: s.title,
                 artist: s.artist,
                 year: s.year,
-            }
-        }).sort();
-        console.log(songs)
-        const categoryName = categoryId === undefined ? 'Toutes' : this.state.playlist.categories.find(c => c.id === categoryId).name;
-        console.log(categoryId, categoryName)
-        this.socket.emit('show-song-list', {
+            };
+        }).sort() || [];
+
+        const categoryName = categoryId === undefined ? 'Toutes' : 
+            state.playlist.categories?.find(c => c.id === categoryId)?.name || '';
+        
+        socket.current.emit('show-song-list', {
             name: categoryName,
             songs: songs
         });
-    }
+    };
 
-    handleToSong(id) {
-        this.setState({
-            ...this.state,
-            pickedSongs: [...this.state.pickedSongs, id]
-        });
-        console.log(this.state);
-        const song = this.state.playlist.songs.find(song => song.id === id);
+    const handleToSong = (id) => {
+        setState(prevState => ({
+            ...prevState,
+            pickedSongs: [...prevState.pickedSongs, id]
+        }));
+
+        const song = state.playlist.songs?.find(song => song.id === id);
+        if (!song) return;
+        
         console.log('goto song', song);
         
-        if (this.state.ffaMode) {
+        if (state.ffaMode) {
             song.guess_line = 9000;
             song.guess_timecode = '99:00.00';
         }
         
         // Add track_id to the song object if it's available
-        if (this.state.trackId) {
-            song.track_id = this.state.trackId;
+        if (state.trackId) {
+            song.track_id = state.trackId;
         }
         
-        this.socket.emit('goto-song', song);
-        this.setState({
-            ...this.state,
+        socket.current.emit('goto-song', song);
+        
+        // Set initial expected words from the song data
+        // The actual value may be updated later by the server
+        setState(prevState => ({
+            ...prevState,
             expectedWords: song.expected_words || 0
-        })
-    }
+        }));
+    };
 
-    handleTrackIdChange(evt) {
-        this.setState({
-            ...this.state,
+    const handleTrackIdChange = (evt) => {
+        setState(prevState => ({
+            ...prevState,
             trackId: evt.target.value
-        });
-    }
+        }));
+    };
 
-    handleProposeLyrics() {
-        const lyrics = this.state.proposedLyrics.trim();
-        console.log(' propose Lyrics', lyrics);
-        this.socket.emit('propose-lyrics', lyrics);
-    }
+    const handleProposeLyrics = () => {
+        const lyrics = state.proposedLyrics.trim();
+        console.log('propose Lyrics', lyrics);
+        socket.current.emit('propose-lyrics', lyrics);
+    };
     
-    handleInput(evt) {
-        this.setState({
-            ...this.state,
+    const handleInput = (evt) => {
+        setState(prevState => ({
+            ...prevState,
             proposedLyrics: evt.target.value,
-        });
-    }
+        }));
+    };
     
-    handleLyricsFreeze() {
-        this.proposedLyricsRef.value = '';
-        this.socket.emit('freeze-lyrics');
-    }
+    const handleLyricsFreeze = () => {
+        if (proposedLyricsRef.current) {
+            proposedLyricsRef.current.value = '';
+        }
+        socket.current.emit('freeze-lyrics');
+    };
 
-    handleLyricsValidate() { 
-        this.socket.emit('validate-lyrics');
-    }
+    const handleLyricsValidate = () => { 
+        socket.current.emit('validate-lyrics');
+    };
 
-    handleLyricsReveal() {
-        this.socket.emit('reveal-lyrics');
-    }
+    const handleLyricsReveal = () => {
+        socket.current.emit('reveal-lyrics');
+    };
 
-    handleLyricsContinue() {
-        this.socket.emit('continue-lyrics');
-    }
+    const handleLyricsContinue = () => {
+        socket.current.emit('continue-lyrics');
+    };
 
-    render() {
-        const songList = this.state.playlist.songs || [];
-        const categories = (this.state.playlist.categories || []).map(c => {
-            return {
-                ...c,
-                songs: songList.filter(s => s.category === c.id),
+    // Render logic
+    const songList = state.playlist.songs || [];
+    const categories = (state.playlist.categories || []).map(c => {
+        return {
+            ...c,
+            songs: songList.filter(s => s.category === c.id),
+        };
+    });
+
+    const categoriesElements = categories.map(cat => {
+        const songsElements = cat.songs.map(song => {
+            // Determine button class based on validation result
+            let buttonClass = '';
+            if (state.songResults.hasOwnProperty(song.id)) {
+                buttonClass = state.songResults[song.id] ? 'success' : 'failure';
             }
-        });
-
-        const categoriesElements = categories.map(cat => {
-            const songsElements = cat.songs.map(song => {
-                // Determine button class based on validation result
-                let buttonClass = '';
-                if (this.state.songResults.hasOwnProperty(song.id)) {
-                    buttonClass = this.state.songResults[song.id] ? 'success' : 'failure';
-                }
-                
-                return (
-                    <button 
-                        key={song.id} 
-                        className={buttonClass}
-                        onClick={() => this.handleToSong(song.id)}
-                    >
-                        Go to "{song.title}"
-                    </button>
-                )
-            }); 
+            
             return (
-                <div className="category" key={`category-${cat.id}`}>
-                    <button className="title" key={cat.id} onClick={() => this.handleToSongList(cat.id)}>Go to "{cat.name}"</button>
-                    <div className="songs">
-                        {songsElements}
-                    </div>
-                </div>
+                <button 
+                    key={song.id} 
+                    className={buttonClass}
+                    onClick={() => handleToSong(song.id)}
+                >
+                    Go to "{song.title}"
+                </button>
             );
-        });
-
-        const canPropose = this.state.expectedWords > 0 && this.state.proposedLyrics.trim().split(' ').length === this.state.expectedWords;
-
+        }); 
         return (
-            <div className="controller">
-                <div className="service">
-                    <button onClick={this.handleFfaToggle}>FFA {this.state.ffaMode? 'On' : 'Off'}</button>
-                    <button onClick={this.handlePerfModeToggle}>Perf {this.state.perfMode? 'On' : 'Off'}</button>
-                    <button className="warn" onClick={this.handleReset}> RESET </button>
+            <div className="category" key={`category-${cat.id}`}>
+                <button className="title" key={cat.id} onClick={() => handleToSongList(cat.id)}>Go to "{cat.name}"</button>
+                <div className="songs">
+                    {songsElements}
                 </div>
-                <button onClick={this.handleToIntro}>To intro</button>
-                <button onClick={this.handleToCategories}>To Categories</button>
-                
-                <div className="track-id-form">
-                    <div className="form-group">
-                        <label htmlFor="trackId">Spotify Track ID:</label>
-                        <input 
-                            id="trackId"
-                            type="text" 
-                            placeholder="Enter Spotify Track ID" 
-                            value={this.state.trackId}
-                            onChange={this.handleTrackIdChange}
-                            className="track-id-input"
-                        />
-                    </div>
-                    <div className="helper-text">
-                        This track ID will be sent with the next song
-                    </div>
-                </div>
-                
-                <div className="lyrics-form">
-                    <input  placeholder={`${this.state.expectedWords} mots attendu`} 
-                            ref={el => this.proposedLyricsRef = el} 
-                            onChange={this.handleInput} />
-                    <div>
-                        <button onClick={this.handleProposeLyrics} disabled={!canPropose}>Propose Lyrics</button>
-                        <button onClick={this.handleLyricsFreeze} disabled={!canPropose}>Freeze</button>
-                        <button onClick={this.handleLyricsValidate} disabled={!canPropose}>Validate</button>
-                        <button onClick={this.handleLyricsReveal}>Reveal</button>
-                        <button onClick={this.handleLyricsContinue}>Continue</button>
-                    </div>
-                </div>
-                {categoriesElements}
             </div>
-        )
-    }
-}
+        );
+    });
+
+    const canPropose = state.expectedWords > 0 && 
+                       state.proposedLyrics.trim().replace(/'/g, ' ').split(/\s+/).filter(word => word.length > 0).length === state.expectedWords;
+
+    return (
+        <div className="controller">
+            <div className="service">
+                <button onClick={handleFfaToggle}>FFA {state.ffaMode? 'On' : 'Off'}</button>
+                <button onClick={handlePerfModeToggle}>Perf {state.perfMode? 'On' : 'Off'}</button>
+                <button className="warn" onClick={handleReset}> RESET </button>
+            </div>
+            <button onClick={handleToIntro}>To intro</button>
+            <button onClick={handleToCategories}>To Categories</button>
+            
+            <div className="track-id-form">
+                <div className="form-group">
+                    <label htmlFor="trackId">Spotify Track ID:</label>
+                    <input 
+                        id="trackId"
+                        type="text" 
+                        placeholder="Enter Spotify Track ID" 
+                        value={state.trackId}
+                        onChange={handleTrackIdChange}
+                        className="track-id-input"
+                    />
+                </div>
+                <div className="helper-text">
+                    This track ID will be sent with the next song
+                </div>
+            </div>
+            
+            <div className="lyrics-form">
+                <input  
+                    placeholder={`${state.expectedWords} mots attendu`} 
+                    ref={proposedLyricsRef} 
+                    onChange={handleInput} 
+                />
+                <div>
+                    <button onClick={handleProposeLyrics} disabled={!canPropose}>Propose Lyrics</button>
+                    <button onClick={handleLyricsFreeze} disabled={!canPropose}>Freeze</button>
+                    <button onClick={handleLyricsValidate} disabled={!canPropose}>Validate</button>
+                    <button onClick={handleLyricsReveal}>Reveal</button>
+                    <button onClick={handleLyricsContinue}>Continue</button>
+                </div>
+            </div>
+            {categoriesElements}
+        </div>
+    );
+};
+
+export default ControllerComponent;

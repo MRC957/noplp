@@ -138,9 +138,16 @@ def handle_continue_lyrics():
 # New handler for lyrics validation result from Song to Controller
 @socketio.on('lyrics-validation-result')
 def handle_lyrics_validation_result(data):
-    print(f"Lyrics validation result: {data}")
+    # print(f"Lyrics validation result: {data}")
     # Broadcast to all clients in the room except the sender
     emit('lyrics-validation-result', data, room='karaoke', include_self=False)
+
+# New handler for updating word count from Song to Controller
+@socketio.on('lyrics-words-count')
+def handle_lyrics_words_count(data):
+    # print(f"Lyrics words count update: {data}")
+    # Broadcast the actual word count to all clients in the room
+    emit('lyrics-words-count', data, room='karaoke', include_self=False)
 
 @socketio.on('set-perf-mode')
 def handle_set_perf_mode(args):

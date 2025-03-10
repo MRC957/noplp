@@ -1,15 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
-import TextBox from "./TextBox";
-import "./Song.css";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { emitEvent } from "../hooks/socketManager";
+import SpotifyPlayer from "./SpotifyPlayer";
+import LyricsDisplay from "./LyricsDisplay";
+import SongHeader from "./SongHeader";
+import "./Song.css";
 
-// Lyric state constants
-export const STATE_LYRICS_NONE = 'none';
-export const STATE_LYRICS_SUGGESTED = 'suggested';
-export const STATE_LYRICS_FROZEN = 'frozen';
-export const STATE_LYRICS_VALIDATE = 'validate';
-export const STATE_LYRICS_REVEAL = 'reveal';
-export const STATE_LYRICS_CONTINUE = 'continue';
+// Import lyric state constants from the new constants file
+import {
+  STATE_LYRICS_NONE,
+  STATE_LYRICS_SUGGESTED,
+  STATE_LYRICS_FROZEN,
+  STATE_LYRICS_VALIDATE,
+  STATE_LYRICS_REVEAL,
+  STATE_LYRICS_CONTINUE
+} from "../constants/lyricsStates";
 
 const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   // Player and audio states
@@ -34,16 +38,36 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     revealedLyrics: [],     // Track revealed lyrics to avoid pausing for them again
   });
 
-  // Add a ref to always track the current lyrics state
+  // Track pending song load
+  const [pendingTrackId, setPendingTrackId] = useState(null);
+
+  // Add refs to always track the current state
   const lyricsStateRef = useRef(lyricsState);
+  const playerStateRef = useRef(playerState);
   
-  // Update ref whenever lyricsState changes
+  // Update refs whenever state changes
   useEffect(() => {
     lyricsStateRef.current = lyricsState;
   }, [lyricsState]);
 
+  useEffect(() => {
+    playerStateRef.current = playerState;
+  }, [playerState]);
+
+  // Additional refs for song handling
+  const spotifyPlayerRef = useRef();
+  const musicBedTimeoutRef = useRef(null);
+  const pauseOffsetRef = useRef(500);
+  const preventRepeatedPauseRef = useRef(false); // Prevent immediate re-pause
+  const hasInitializedRef = useRef(false); // Track if the current song has been initialized
+  const cleanupInProgressRef = useRef(false); // Track if cleanup is in progress
+  const songLoadAbortControllerRef = useRef(null); // AbortController for fetch requests
+  
   // Track the previous lyrics state to detect changes
   const previousLyricStateRef = useRef(STATE_LYRICS_NONE);
+  
+  // Store the previous song ID to detect changes
+  const previousSongIdRef = useRef(null);
   
   // Effect to play sounds when lyric state changes
   useEffect(() => {
@@ -59,8 +83,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
           jukebox('freeze');
           break;
         case STATE_LYRICS_VALIDATE:
-          // We'll check if the answer is correct in the validation logic
-          // and play either 'good' or 'bad' accordingly
+          // Check if the answer is correct
           const isCorrect = checkIfLyricsAreCorrect();
           jukebox(isCorrect ? 'good' : 'bad');
           
@@ -75,29 +98,13 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
         case STATE_LYRICS_REVEAL:
           jukebox('good');
           // When lyrics are revealed, add them to the revealedLyrics array
-          if (lyricsState.currentLyricIndex >= 0) {
-            const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
-            if (currentLyric) {
-              setLyricsState(prev => ({
-                ...prev,
-                revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
-              }));
-            }
-          }
+          updateRevealedLyrics();
           break;
         case STATE_LYRICS_CONTINUE:
           // Resume playback when continue is triggered
           resumePlayback();
           // Also mark current lyric as revealed if not already done
-          if (lyricsState.currentLyricIndex >= 0) {
-            const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
-            if (currentLyric && !lyricsState.revealedLyrics.includes(currentLyric.startTimeMs)) {
-              setLyricsState(prev => ({
-                ...prev,
-                revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
-              }));
-            }
-          }
+          updateRevealedLyrics();
           break;
         default:
           break;
@@ -106,7 +113,20 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       // Update the previous state reference
       previousLyricStateRef.current = currentState;
     }
-  }, [suggestedLyrics?.state, jukebox]);
+  }, [suggestedLyrics?.state, jukebox, song]);
+
+  // Helper function to update revealed lyrics
+  const updateRevealedLyrics = () => {
+    if (lyricsState.currentLyricIndex >= 0) {
+      const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
+      if (currentLyric && !lyricsState.revealedLyrics.includes(currentLyric.startTimeMs)) {
+        setLyricsState(prev => ({
+          ...prev,
+          revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
+        }));
+      }
+    }
+  };
 
   // Function to check if the suggested lyrics are correct
   const checkIfLyricsAreCorrect = () => {
@@ -132,218 +152,263 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     return suggestedWords === correctWords;
   };
 
-  // Track pending song load
-  const [pendingTrackId, setPendingTrackId] = useState(null);
+  // Load the Spotify iframe API - added to fix the undefined reference
+  const loadSpotifyIframeApi = () => {
+    // Since we're now using the SpotifyPlayer component, this is just a stub
+    // The actual implementation is in the SpotifyPlayer component
+    console.log('Main Song component delegating Spotify API initialization to SpotifyPlayer');
+  };
 
-  // Refs
-  const spotifyApiRef = useRef(null);
-  const spotifyControllerRef = useRef(null);
-  const playerContainerRef = useRef(null);
-  const musicBedTimeoutRef = useRef(null);
-  const pauseOffsetRef = useRef(500);
-  const preventRepeatedPauseRef = useRef(false); // Prevent immediate re-pause
-
-  // Load Spotify iframe API
+  // Component cleanup
   useEffect(() => {
+    return () => {
+      cleanupSong(true); // Full component unmount cleanup
+    };
+  }, []);
+
+  // Load Spotify iframe API on mount
+  useEffect(() => {
+    console.log('Song component mounted, loading Spotify API');
     loadSpotifyIframeApi();
     
+    // Initialize player visibility if we have a track ID
+    if (song?.track_id) {
+      console.log('Setting initial track ID and visibility:', song.track_id);
+      setPendingTrackId(song.track_id);
+      setPlayerState(prev => ({
+        ...prev,
+        playerVisible: true
+      }));
+    }
+    
     return () => {
-      cleanup();
+      cleanupSong(true);
     };
   }, []);
 
   // Handle song or track_id changes
   useEffect(() => {
-    if (song?.track_id) {
-      console.log(`Song component received track_id: ${song.track_id}`);
+    // Check if song has changed or if we're initializing with a new song
+    if (song?.id && (song.id !== previousSongIdRef.current || !previousSongIdRef.current)) {
+      console.log(`Song component received a new song: ${song.id}`);
       
-      // If Spotify API is ready, load the song immediately
-      if (spotifyApiRef.current) {
-        loadSong(song.track_id);
-      } else {
-        // Otherwise, store the track ID to load later when API is ready
-        console.log('Spotify API not ready yet, queueing track for later');
+      // Store new song ID
+      previousSongIdRef.current = song.id;
+      
+      // Reset lyric state references
+      previousLyricStateRef.current = STATE_LYRICS_NONE;
+      
+      // Reset the initialization flag to ensure playback starts for the new song
+      hasInitializedRef.current = false;
+      
+      // Clean up any existing player and state
+      cleanupSong();
+
+      // Set track ID immediately if available
+      if (song.track_id) {
+        console.log(`Setting track ID for new song: ${song.track_id}`);
         setPendingTrackId(song.track_id);
+        setPlayerState(prev => ({
+          ...prev,
+          playerVisible: true,
+          // Reset any error state from previous song
+          errorMessage: null
+        }));
       }
     }
   }, [song?.id, song?.track_id]);
 
-  // Handle API ready and pending track load
-  useEffect(() => {
-    if (spotifyApiRef.current && pendingTrackId) {
-      console.log(`Spotify API now ready, loading pending track: ${pendingTrackId}`);
-      loadSong(pendingTrackId);
-      setPendingTrackId(null);
-    }
-  }, [playerState.playerReady, pendingTrackId]);
-
   // Start playing when everything is ready
   useEffect(() => {
+    console.log('Checking playback conditions:', {
+      hasInitializedRef: hasInitializedRef.current,
+      audioReady: playerState.audioReady,
+      lyricsReady: lyricsState.lyricsReady,
+      playerReady: playerState.playerReady,
+      hasSong: !!song
+    });
+
+    // if (song && playerState.audioReady && lyricsState.lyricsReady && playerState.playerReady && !hasInitializedRef.current) {
     if (song && playerState.audioReady && lyricsState.lyricsReady && playerState.playerReady) {
       console.log("All conditions are OK to start playback");
+      hasInitializedRef.current = true;
       startPlaying();
     }
   }, [song, playerState.audioReady, lyricsState.lyricsReady, playerState.playerReady]);
 
-  // Load the Spotify iframe API
-  const loadSpotifyIframeApi = () => {
-    if (window.onSpotifyIframeApiReady) return;
-    
-    window.onSpotifyIframeApiReady = (IFrameAPI) => {
-      console.log('Spotify Iframe API is ready');
-      spotifyApiRef.current = IFrameAPI;
-      setPlayerState(prev => ({ ...prev, playerReady: true }));
-    };
-    
-    const script = document.createElement('script');
-    script.src = 'https://open.spotify.com/embed/iframe-api/v1';
-    script.async = true;
-    document.body.appendChild(script);
-  };
+  // Comprehensive cleanup function
+  const cleanupSong = (isComponentUnmount = false) => {
+    // Prevent concurrent cleanup operations
+    if (cleanupInProgressRef.current) return;
+    cleanupInProgressRef.current = true;
 
-  // Cleanup function
-  const cleanup = () => {
+    console.log('Running comprehensive song cleanup');
+
+    // Cancel any pending fetch requests
+    if (songLoadAbortControllerRef.current) {
+      try {
+        songLoadAbortControllerRef.current.abort();
+      } catch (error) {
+        console.error('Error aborting fetch:', error);
+      }
+    }
+    
+    // Clear any bed music timeout
     if (musicBedTimeoutRef.current) {
       clearTimeout(musicBedTimeoutRef.current);
       musicBedTimeoutRef.current = null;
     }
     
-    if (spotifyControllerRef.current) {
-      spotifyControllerRef.current.destroy();
-      spotifyControllerRef.current = null;
+    // Stop bed music if playing
+    if (jukebox) {
+      jukebox('stop');
     }
-  };
+    
+    // Reset control flags
+    preventRepeatedPauseRef.current = false;
+    hasInitializedRef.current = false;
 
-  // Create player container
-  const createPlayerContainer = () => {
-    const parentContainer = playerContainerRef.current;
-    if (!parentContainer) {
-      console.error('Player parent container not found');
-      return false;
-    }
-    
-    parentContainer.innerHTML = '';
-    
-    const playerElement = document.createElement('div');
-    playerElement.id = 'spotify-player';
-    playerElement.className = 'spotify-player-container';
-    
-    parentContainer.appendChild(playerElement);
-    return true;
-  };
-
-  // Load song data and create player
-  const loadSong = (trackId) => {
-    if (!spotifyApiRef.current) {
-      console.warn("Spotify API not ready yet, cannot load song");
-      return;
-    }
-    
-    cleanup();
-    
-    // Reset states
-    setPlayerState({
-      playerReady: true, // We know the API is ready at this point
-      playerVisible: true,
-      audioReady: false,
-      errorMessage: null,
-      currentTime: 0,
-      pausedForGuessing: false,
-    });
-    
-    setLyricsState({
-      lyricsReady: false,
-      lyrics: [],
-      lyricsToGuess: [],
-      currentLine: -1,
-      currentLyricIndex: -1,
-      lyricsLoading: true,
-      lyricsError: null,
-      revealedLyrics: [], // Reset revealed lyrics for new song
-    });
-    
-    if (!song) {
-      console.error("No song provided");
-      setLyricsState(prev => ({
-        ...prev,
-        lyricsLoading: false,
-        lyricsError: "No song data provided"
-      }));
-      return;
-    }
-
-    if (!trackId) {
-      console.warn("No track_id provided in song data");
-      setLyricsState(prev => ({
-        ...prev,
-        lyricsLoading: false,
-        lyricsError: "No Spotify track ID provided"
-      }));
-      return;
-    }
-
-    // Create the player container
-    if (createPlayerContainer()) {
-      console.log(`Loading Spotify player for track: ${trackId}`);
-      
-      // Create player and fetch lyrics in parallel
-      createSpotifyPlayer(trackId);
-      fetchLyrics(trackId);
-    }
-  };
-
-  // Create Spotify player
-  const createSpotifyPlayer = (trackId) => {
-    try {
-      const element = document.getElementById('spotify-player');
-      if (!element) throw new Error('Player container not found');
-      if (!spotifyApiRef.current) throw new Error('Spotify Iframe API not loaded');
-      
-      const options = {
-        uri: `spotify:track:${trackId}`,
-        width: '100%',
-        height: '152',
-        theme: 'dark'
-      };
-      
-      spotifyApiRef.current.createController(element, options, (controller) => {
-        spotifyControllerRef.current = controller;
-        
-        controller.addListener('ready', () => {
-          console.log('Spotify player is ready');
-          setPlayerState(prev => ({ ...prev, audioReady: true }));
-        });
-        
-        controller.addListener('playback_update', (data) => {
-          if (data?.data?.position !== undefined) {
-            const position = data.data.position;
-            setPlayerState(prev => ({ ...prev, currentTime: position }));
-            updateDisplayedLyrics(position, controller);
-          }
-        });
-        
-        controller.addListener('error', (error) => {
-          console.error('Spotify player error:', error);
-          setPlayerState(prev => ({ 
-            ...prev,
-            errorMessage: `Error: ${error.message || 'Failed to load track'}`,
-            audioReady: false
-          }));
-        });
-      });
-    } catch (error) {
-      console.error('Error setting up Spotify player:', error);
-      setPlayerState(prev => ({
-        ...prev,
-        errorMessage: `Error: ${error.message || 'Failed to set up player'}`,
+    // Only reset state if not unmounting the component
+    // This prevents React warnings about state updates on unmounted components
+    if (!isComponentUnmount) {
+      // Reset player state
+      setPlayerState({
+        playerReady: playerState.playerReady, // Maintain API ready state
         playerVisible: false,
-        audioReady: false
-      }));
+        audioReady: false,
+        errorMessage: null,
+        currentTime: 0,
+        pausedForGuessing: false,
+      });
+      
+      // Reset lyrics state
+      setLyricsState({
+        lyricsReady: false,
+        lyrics: [],
+        lyricsToGuess: [],
+        currentLine: -1,
+        currentLyricIndex: -1,
+        lyricsLoading: false,
+        lyricsError: null,
+        revealedLyrics: [], // Reset revealed lyrics for new song
+      });
+    }
+
+    // Cleanup complete
+    cleanupInProgressRef.current = false;
+  };
+
+  // Handler for Spotify player ready event
+  const handlePlayerReady = (isReady) => {
+    console.log('Spotify player ready:', isReady);
+    setPlayerState(prev => ({ 
+      ...prev, 
+      playerReady: isReady,
+      playerVisible: isReady && !!pendingTrackId
+    }));
+  };
+
+  // Handler for Spotify audio ready event
+  const handleAudioReady = (isReady) => {
+    console.log('Spotify audio ready:', isReady);
+    setPlayerState(prev => ({ 
+      ...prev, 
+      audioReady: isReady,
+      playerVisible: isReady && !!pendingTrackId
+    }));
+  };
+
+  // Handler for Spotify playback updates
+  const handlePlaybackUpdate = (position, controller) => {
+    setPlayerState(prev => ({ ...prev, currentTime: position }));
+    updateDisplayedLyrics(position, controller);
+  };
+
+  // Handler for Spotify player errors
+  const handlePlayerError = (errorMessage) => {
+    setPlayerState(prev => ({ 
+      ...prev, 
+      errorMessage,
+      audioReady: false,
+      playerVisible: false
+    }));
+  };
+
+  // Update displayed lyrics based on current time
+  const updateDisplayedLyrics = (position, controller) => {
+    // Use the refs to get the latest state
+    const { lyrics, currentLyricIndex, lyricsToGuess, revealedLyrics } = lyricsStateRef.current;
+    const { pausedForGuessing } = playerStateRef.current;
+    
+    if (!lyrics || lyrics.length === 0) {
+      return;
+    }
+    
+    // Find current lyric index based on timestamp
+    let newIndex = -1;
+    for (let i = 0; i < lyrics.length; i++) {
+      if (lyrics[i].startTimeMs <= position) {
+        newIndex = i;
+      } else if (lyrics[i].startTimeMs > position) {
+        break;
+      }
+    }
+    
+    // Update lyric index if changed (but don't update if we're paused for guessing)
+    if (newIndex !== currentLyricIndex && !pausedForGuessing) {
+      setLyricsState(prev => ({ ...prev, currentLyricIndex: newIndex }));
+    }
+
+    // Check for upcoming guessable lyrics to pause for
+    if (!pausedForGuessing && controller && !preventRepeatedPauseRef.current) {
+      for (let i = 0; i < lyrics.length; i++) {
+        const lyricStartTime = lyrics[i].startTimeMs;
+        const timeUntilLyric = lyricStartTime - position;
+        
+        // Check if this lyric is close enough to pause (within the pause offset window)
+        if (timeUntilLyric > 0 && timeUntilLyric <= pauseOffsetRef.current) {
+          // Only process if this line contains lyrics to guess
+          if (lyricsToGuess.some(g => g.startTimeMs === lyricStartTime)) {
+            // Skip if this lyric has been previously revealed
+            if (revealedLyrics.includes(lyricStartTime)) {
+              console.log(`Skipping already revealed lyric at ${lyricStartTime}`);
+              continue;
+            }
+
+            console.log(`Pausing before lyric with words to guess at time ${lyricStartTime}`);
+            
+            try {
+              // Pause the player when we're approaching lyrics to guess
+              controller.pause();
+              
+              // Set the current lyric index to the line we're about to guess
+              // Important: This ensures we display the correct line for guessing
+              setLyricsState(prev => ({ ...prev, currentLyricIndex: i }));
+              
+              // Update player state to indicate we're paused for guessing
+              setPlayerState(prev => ({ ...prev, pausedForGuessing: true }));
+
+              // Start background music for guessing after a short delay
+              if (musicBedTimeoutRef.current) {
+                clearTimeout(musicBedTimeoutRef.current);
+              }
+              
+              musicBedTimeoutRef.current = setTimeout(() => {
+                if (jukebox) jukebox('bed');
+              }, 1000);
+            } catch (error) {
+              console.error("Error pausing Spotify player:", error);
+            }
+            
+            break;
+          }
+        }
+      }
     }
   };
 
   // Fetch lyrics from backend
-  const fetchLyrics = (trackId) => {
+  const fetchLyrics = useCallback((trackId) => {
     const wordsToGuess = song?.expected_words;
     
     setLyricsState(prev => ({ 
@@ -352,12 +417,22 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       lyricsError: null 
     }));
     
-    fetch(`http://localhost:4001/api/getLyrics/${trackId}/${wordsToGuess}`)
+    // Create a new AbortController for this fetch request
+    if (songLoadAbortControllerRef.current) {
+      songLoadAbortControllerRef.current.abort();
+    }
+    songLoadAbortControllerRef.current = new AbortController();
+    const signal = songLoadAbortControllerRef.current.signal;
+    
+    fetch(`http://localhost:4001/api/getLyrics/${trackId}/${wordsToGuess}`, { signal })
       .then(response => {
+        if (signal.aborted) throw new Error('Request was aborted');
         if (!response.ok) throw new Error(`Failed to fetch lyrics: ${response.status}`);
         return response.json();
       })
       .then(data => {
+        if (signal.aborted) throw new Error('Request was aborted');
+        
         setLyricsState(prev => ({ 
           ...prev,
           lyricsToGuess: data.lyricsToGuess || [], 
@@ -365,8 +440,29 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
           lyricsReady: true,
           lyricsLoading: false 
         }));
+        
+        // Check if words_to_guess was returned and different from what we expected
+        if (data.words_to_guess !== undefined && song?.id) {
+          // Get the word count from the API
+          const actualWordsToGuess = data.words_to_guess;
+          
+          // Emit to controllers if it's different from what was requested
+          if (actualWordsToGuess !== wordsToGuess) {
+            console.log(`Emitting updated word count: ${actualWordsToGuess}`);
+            emitEvent('lyrics-words-count', {
+              songId: song.id,
+              count: actualWordsToGuess
+            });
+          }
+        }
       })
       .catch(error => {
+        // Don't update state if request was intentionally aborted
+        if (error.name === 'AbortError') {
+          console.log('Fetch request was aborted');
+          return;
+        }
+        
         console.error('Error fetching lyrics:', error);
         setLyricsState(prev => ({ 
           ...prev,
@@ -374,82 +470,39 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
           lyricsReady: false,
           lyricsLoading: false 
         }));
-      });
-  };
-
-  // Update displayed lyrics based on current time
-  const updateDisplayedLyrics = (currentTime, controller) => {
-    // Use the ref to get the latest lyrics state
-    const { lyrics, currentLyricIndex, lyricsToGuess, revealedLyrics } = lyricsStateRef.current;
-    
-    if (!lyrics || lyrics.length === 0) {
-      console.log("No lyrics available yet in updateDisplayedLyrics");
-      return;
-    }
-    
-    // Find current lyric index
-    let newIndex = -1;
-    for (let i = 0; i < lyrics.length; i++) {
-      if (lyrics[i].startTimeMs <= currentTime) {
-        newIndex = i;
-      } else if (lyrics[i].startTimeMs > currentTime) {
-        break;
-      }
-    }
-    
-    // Update lyric index if changed
-    if (newIndex !== currentLyricIndex) {
-      setLyricsState(prev => ({ ...prev, currentLyricIndex: newIndex }));
-      if (currentLyricIndex !== -1) setPlayerState(prev => ({ ...prev, pausedForGuessing: false }));
-    }
-
-    // Check for upcoming guessable lyrics to pause for
-    if (!playerState.pausedForGuessing && controller && !preventRepeatedPauseRef.current) {
-        for (let i = 0; i < lyrics.length; i++) {
-            const lyricStartTime = lyrics[i].startTimeMs;
-            const timeUntilLyric = lyricStartTime - currentTime;
-            
-            // Check if this lyric is close enough to pause
-            if (timeUntilLyric > 0 && timeUntilLyric <= pauseOffsetRef.current) {
-                // Only process if this line contains lyrics to guess
-                if (lyricsToGuess.some(g => g.startTimeMs === lyricStartTime)) {
-                    // Skip if this lyric has been previously revealed
-                    if (revealedLyrics.includes(lyricStartTime)) {
-                        console.log(`Skipping already revealed lyric at ${lyricStartTime}`);
-                        continue;
-                    }
-
-                    console.log(`Pausing before lyric with words to guess at time ${lyricStartTime}`);
-                    controller.pause();
-                    
-                    setPlayerState(prev => ({ ...prev, pausedForGuessing: true }));
-                    setLyricsState(prev => ({ ...prev, currentLyricIndex: i }));
-
-                    // Start background music for guessing
-                    musicBedTimeoutRef.current = setTimeout(() => {
-                        jukebox('bed');
-                    }, 1000);
-                    
-                    break;
-                }
-            }
+      })
+      .finally(() => {
+        // Clean up the controller reference if it's still the current one
+        if (songLoadAbortControllerRef.current && songLoadAbortControllerRef.current.signal === signal) {
+          songLoadAbortControllerRef.current = null;
         }
-    }
-  };
+      });
+  }, [song]);
 
   // Start playing the song
   const startPlaying = () => {
-    if (!playerState.audioReady || !lyricsState.lyricsReady || !spotifyControllerRef.current) {
+    if (!playerState.audioReady || !lyricsState.lyricsReady) {
       return;
     }
     
     console.log('Starting playback');
-    spotifyControllerRef.current.play()
+    
+    try {
+      // Reset the pause prevention flag before playing
+      preventRepeatedPauseRef.current = false;
+      
+      // Call the play method through the SpotifyPlayer ref
+      if (spotifyPlayerRef.current && spotifyPlayerRef.current.play) {
+        spotifyPlayerRef.current.play();
+      }
+    } catch (error) {
+      console.error("Error starting Spotify player:", error);
+    }
   };
 
   // Resume playback after lyrics reveal
   const resumePlayback = () => {
-    if (spotifyControllerRef.current && playerState.pausedForGuessing) {
+    if (playerStateRef.current.pausedForGuessing) {
       console.log("Resuming playback after lyrics reveal");
       
       // Clear any music bed that might be playing
@@ -459,25 +512,41 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       }
       
       // Stop bed music
-      jukebox('stop');
+      if (jukebox) {
+        jukebox('stop');
+      }
       
       // Set flag to prevent immediate re-pause
       preventRepeatedPauseRef.current = true;
       
-      // Reset the flag after a short delay to allow playback to continue
-      setTimeout(() => {
-        preventRepeatedPauseRef.current = false;
-      }, 1000);
-      
-      // Resume playback
-      spotifyControllerRef.current.resume();
+      try {
+        // Resume playback through the SpotifyPlayer ref
+        if (spotifyPlayerRef.current && spotifyPlayerRef.current.resume) {
+          spotifyPlayerRef.current.resume();
+        }
+      } catch (error) {
+        console.error("Error resuming Spotify player:", error);
+      }
       
       // Update state to indicate we're no longer paused for guessing
       setPlayerState(prev => ({ ...prev, pausedForGuessing: false }));
+      
+      // Reset the flag after a short delay to allow playback to continue
+      setTimeout(() => {
+        preventRepeatedPauseRef.current = false;
+      }, 1500); // Increased delay to ensure player has time to continue
     }
   };
 
-  // Format time for display
+  // Effect to load lyrics when track id changes
+  useEffect(() => {
+    if (pendingTrackId) {
+      console.log(`Loading lyrics for track: ${pendingTrackId}`);
+      fetchLyrics(pendingTrackId);
+    }
+  }, [pendingTrackId, fetchLyrics]);
+
+  // Format time for display (utility function)
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -485,221 +554,47 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Render lyrics with suggestion support
-  const renderLyrics = () => {
-    const { lyrics, lyricsToGuess, currentLyricIndex, lyricsLoading, lyricsError } = lyricsState;
-    
-    if (lyricsLoading) {
-        return <TextBox className="lyrics-container"><div className="lyrics-loading">Loading lyrics...</div></TextBox>;
-    }
-    
-    if (lyricsError) {
-        return <TextBox className="lyrics-container"><div className="lyrics-error">{lyricsError}</div></TextBox>;
-    }
-    
-    if (!lyrics || lyrics.length === 0) {
-        return <TextBox className="lyrics-container"><div className="lyrics-empty">No lyrics available</div></TextBox>;
-    }
-    
-    // Find visible lyrics range
-    const visibleWindow = 1;
-    const startIdx = Math.max(0, currentLyricIndex - visibleWindow);
-    const endIdx = Math.min(lyrics.length - 1, currentLyricIndex + visibleWindow);
-    
-    const visibleLyrics = [];
-    for (let i = startIdx; i <= endIdx; i++) {
-        const line = lyrics[i];
-        if (!line) continue;
-        
-        // Process line for display
-        const guessEntry = lyricsToGuess.find(g => g.startTimeMs === line.startTimeMs);
-        
-        visibleLyrics.push(
-            <div 
-                key={i} 
-                className={`lyrics-line ${i === currentLyricIndex ? 'active' : ''}`}
-                // className={`lyrics-line ${i === currentLyricIndex ? 'active' : ''} ${guessEntry ? 'guessable' : ''}`}
-            >
-                {processLyricLine(line, guessEntry)}
-            </div>
-        );
-    }
-
-    return (
-        <TextBox className="lyrics-container">
-            <h3 className="lyrics-header"></h3>
-            <div className="lyrics-scroll-area">
-                {visibleLyrics}
-            </div>
-        </TextBox>
-    );
-  };
-
-  const processLyricLine = (line, guessEntry) => {
-    // If no guess entry, just show the lyrics as regular text
-    if (!guessEntry) {
-        return <span>{line.words}</span>;
-    }
-    
-    // If we have suggested lyrics and at the current line with words to guess
-    if (suggestedLyrics && suggestedLyrics.state !== STATE_LYRICS_NONE && 
-        guessEntry && playerState.pausedForGuessing) {
-        
-        // Get the original words to guess
-        const originalWords = guessEntry.words || '';
-        const beforeText = line.words.substring(0, line.words.indexOf(originalWords));
-        const afterText = line.words.substring(line.words.indexOf(originalWords) + originalWords.length);
-        
-        // Handle different states of suggested lyrics
-        switch (suggestedLyrics.state) {
-            case STATE_LYRICS_SUGGESTED:
-                return (
-                    <>
-                        {beforeText}
-                        <span className="lyrics-word">
-                            {suggestedLyrics.content}
-                        </span>
-                        {afterText}
-                    </>
-                );
-            
-            case STATE_LYRICS_FROZEN:
-                return (
-                    <>
-                        {beforeText}
-                        <span className="lyrics-word freeze">
-                            {suggestedLyrics.content}
-                        </span>
-                        {afterText}
-                    </>
-                );
-            
-            case STATE_LYRICS_VALIDATE:
-                // Split both texts into words for comparison
-                const suggestedWords = suggestedLyrics.content.split(/\s+/);
-                const correctWords = originalWords.split(/\s+/);
-                
-                return (
-                    <>
-                        {beforeText}
-                        {suggestedWords.map((word, index) => {
-                            const isCorrect = index < correctWords.length && 
-                                            word.toLowerCase() === correctWords[index].toLowerCase();
-                            return (
-                                <span key={index} className={`lyrics-word ${isCorrect ? 'good' : 'bad'}`}>
-                                    {word}{index < suggestedWords.length - 1 ? ' ' : ''}
-                                </span>
-                            );
-                        })}
-                        {afterText}
-                    </>
-                );
-            
-            case STATE_LYRICS_REVEAL:
-            case STATE_LYRICS_CONTINUE:
-                return (
-                    <>
-                        {beforeText}
-                        <span className="lyrics-word good">
-                            {originalWords}
-                        </span>
-                        {afterText}
-                    </>
-                );
-            
-            default:
-                break;
-        }
-    }
-
-    // Check if this lyric has been revealed via continue state
-    const { revealedLyrics } = lyricsStateRef.current;
-    if (revealedLyrics.includes(line.startTimeMs)) {
-        const originalWords = guessEntry.words || '';
-        const beforeText = line.words.substring(0, line.words.indexOf(originalWords));
-        const afterText = line.words.substring(line.words.indexOf(originalWords) + originalWords.length);
-        
-        return (
-            <>
-                {beforeText}
-                <span className="lyrics-word shown">
-                    {originalWords}
-                </span>
-                {afterText}
-            </>
-        );
-    }
-    
-    // Default behavior - show placeholder for words to guess
-    const wordCount = guessEntry.word_count || 1;
-    const placeholder = '_ '.repeat(wordCount);
-    
-    if (guessEntry.words) {
-        const beforeText = line.words.substring(0, line.words.indexOf(guessEntry.words));
-        const afterText = line.words.substring(line.words.indexOf(guessEntry.words) + guessEntry.words.length);
-        return (
-            <>
-                {beforeText}
-                <span>{placeholder}</span>
-                {afterText}
-            </>
-        );
-    }
-    
-    if (guessEntry.startIndex !== undefined && guessEntry.endIndex !== undefined) {
-        const before = line.words.substring(0, guessEntry.startIndex);
-        const after = line.words.substring(guessEntry.endIndex);
-        return (
-            <>
-                {before}
-                <span>{placeholder}</span>
-                {after}
-            </>
-        );
-    }
-    
-    return <span>{placeholder}</span>;
-  };
-
-  // Render header with song info
-  const renderHeader = () => {
-    if (!song) return null;
-    
-    return (
-      <TextBox className="song-info">
-        <div className="song-title">{song.title}</div>
-        <div className="song-artist">{song.artist}</div>
-      </TextBox>
-    );
-  };
-
-  // Render timecode display
-  const renderTimecode = () => {
-    return (
-      <TextBox className="timecode-display">
-        <div className="timecode-label">Current Time:</div>
-        <div className="timecode-value">{formatTime(playerState.currentTime)}</div>
-      </TextBox>
-    );
-  };
-
   // Main render
   return (
     <div className="song-component">
-      <div 
-        ref={playerContainerRef}
-        className="player-container-wrapper"
-        style={{ display: playerState.playerVisible ? 'block' : 'none' }}
+      <SpotifyPlayer
+        ref={spotifyPlayerRef}
+        trackId={pendingTrackId}
+        onPlayerReady={handlePlayerReady}
+        onAudioReady={handleAudioReady}
+        onPlaybackUpdate={handlePlaybackUpdate}
+        onError={handlePlayerError}
       />
       
       {playerState.errorMessage && <div className="error-message">{playerState.errorMessage}</div>}
       
-      {renderHeader()}
-      {/* {renderTimecode()} */}
-      {renderLyrics()}
+      <SongHeader 
+        title={song?.title} 
+        artist={song?.artist} 
+      />
 
+      <LyricsDisplay
+        lyrics={lyricsState.lyrics}
+        lyricsToGuess={lyricsState.lyricsToGuess}
+        currentLyricIndex={lyricsState.currentLyricIndex}
+        revealedLyrics={lyricsState.revealedLyrics}
+        suggestedLyrics={suggestedLyrics}
+        isLoading={lyricsState.lyricsLoading}
+        error={lyricsState.lyricsError}
+        isPaused={playerState.pausedForGuessing}
+      />
     </div>
   );
+};
+
+// Export both the component and the lyric state constants for backward compatibility
+export {
+  STATE_LYRICS_NONE,
+  STATE_LYRICS_SUGGESTED,
+  STATE_LYRICS_FROZEN,
+  STATE_LYRICS_VALIDATE,
+  STATE_LYRICS_REVEAL,
+  STATE_LYRICS_CONTINUE
 };
 
 export default Song;
