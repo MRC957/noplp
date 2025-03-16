@@ -29,3 +29,7 @@ TODO:
 - Add a "playlist refresh" interface
 - Missed lyrics are chosen randomly based on the difficulty level
 - Populate song database (via Groq or Google)
+
+- Régie capable de changer les mots à deviner (possibilité de regénérer)
+- pq Fref rrançois a 0.5sec de décalage avec les lyrics
+- Lyrics à afficher en + grand

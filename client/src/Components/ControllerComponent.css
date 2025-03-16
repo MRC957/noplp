@@ -4,7 +4,7 @@
     overflow-y: scroll;
     row-gap: 0.5em;
     font-size: 1em;
-    padding: 1em;
+    padding: 20px;
     margin-top: 2em;
     margin-bottom: 5em;
 }
@@ -19,6 +19,13 @@
     margin-bottom: 1em;
 }
 
+.service {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
 .controller .category {
     padding: 0;
     border: solid 1px #999;
@@ -29,7 +36,7 @@
     display: flex;
     flex-direction: column;
     column-gap: 0.3em;
-    margin-bottom: 1.5em;
+    margin-bottom: 20px;
     margin-top: 1em;
     padding: 1em;
     border: 1px solid #999;
@@ -38,7 +45,7 @@
 
 .lyrics-form div {
     display: flex;
-    gap: 0.5em;
+    gap: 10px;
 }
 
 .service {
@@ -51,6 +58,8 @@ button.warn {
 
 .warn {
     font-weight: bold;
+    background-color: #dc3545 !important;
+    color: white !important;
 }
 
 .lyrics-form input {
@@ -59,9 +68,23 @@ button.warn {
     flex: 1;
     width: 100%;
     padding: 8px;
-    margin-bottom: 0.5em;
-    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.lyrics-form button {
+    padding: 8px 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.lyrics-form button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 
 .category {
@@ -69,6 +92,7 @@ button.warn {
     padding: 0.3em;
     display: flex;
     flex-direction: column;
+    margin-bottom: 20px;
 }
 
 button {
@@ -92,19 +116,45 @@ button.failure {
 
 .category .title {
     flex: 1;
-    background-color: rgb(99, 144, 212);
-    font-weight: bold;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 10px;
 }
 
 .category .songs {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
+    gap: 10px;
+}
+
+.category .songs button {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.category .songs button.success {
+    background-color: #28a745;
+    color: white;
+}
+
+.category .songs button.failure {
+    background-color: #dc3545;
+    color: white;
 }
 
 .track-id-form {
     margin: 1em 0.5em;
-    padding: 1em;
+    padding: 15px;
     background-color: #f8f8f8;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -113,25 +163,59 @@ button.failure {
 .track-id-form .form-group {
     display: flex;
     align-items: center;
-    gap: 1em;
-    margin-bottom: 0.5em;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .track-id-form label {
     font-weight: bold;
     min-width: 120px;
+    white-space: nowrap;
 }
 
 .track-id-input {
     flex: 1;
     padding: 8px;
     font-size: 1em;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     border-radius: 4px;
 }
 
+.track-id-submit {
+    padding: 8px 12px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.track-id-submit:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
 .helper-text {
-    font-size: 0.85em;
-    color: #666;
-    margin-top: 4px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.playlist-selector {
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+}
+
+.playlist-selector label {
+    margin-right: 8px;
+    font-weight: bold;
+}
+
+.playlist-selector select {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    font-size: 14px;
+    min-width: 150px;
 }

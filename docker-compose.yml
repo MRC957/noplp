@@ -1,0 +1,51 @@
+version: '3'
+name: "noplp"
+
+services:
+  db:
+    image: postgres:14
+    restart: always
+    ports:
+      - "5432:5432"    
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: karaoke
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-schema.sql:/docker-entrypoint-initdb.d/10-init-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    # container_name: pgadmin4_container
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: postgres@example.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+
+  web:
+    build: .
+    ports:
+      - "4001:4001"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/karaoke?options=-c%20search_path=karaoke,public
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_SD_DC=${SPOTIFY_SD_DC}
+
+volumes:
+  postgres_data:
+  pgadmin-data:

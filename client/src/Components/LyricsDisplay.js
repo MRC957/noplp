@@ -41,7 +41,7 @@ const LyricsDisplay = ({
   
   // Find visible lyrics range for smooth scrolling effect
   // We show a window of lines before and after the current line
-  const visibleWindow = 1;
+  const visibleWindow = 2;
   const startIdx = Math.max(0, currentLyricIndex - visibleWindow);
   const endIdx = Math.min(lyrics.length - 1, currentLyricIndex + visibleWindow);
   

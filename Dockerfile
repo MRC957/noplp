@@ -5,22 +5,43 @@ COPY client/package.json client/package-lock.json ./
 RUN npm install
 
 COPY client/ .
-RUN rm .env \
-    && npm run build
+RUN npm run build
 
 
-FROM node:16
+FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY server/package.json server/package-lock.json ./
-RUN npm install
+# Install PostgreSQL client, dependencies and clean up
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    postgresql-client \
+    gcc \
+    python3-dev \
+    libpq-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY server ./
+# Copy Python requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY --from=client_builder /app/build public
+# Copy Python backend
+COPY python-backend/ ./python-backend/
 
-ENV PORT=8080
-EXPOSE 8080
+# Copy built React app from client_builder
+COPY --from=client_builder /app/build ./client/public
 
-ENTRYPOINT ["npm", "start"]
+# Copy data files
+COPY *.json ./
+COPY *.csv ./
+
+# Set environment variables
+ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/karaoke
+ENV FLASK_APP=python-backend/app.py
+ENV REACT_APP_WEBSOCKET_SERVER=0.0.0.0:4001
+
+EXPOSE 4001
+
+# Command to run the Flask app
+CMD ["python", "python-backend/app.py"]

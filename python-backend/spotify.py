@@ -4,6 +4,8 @@ import requests
 import base64
 from os import getenv
 import urllib.parse
+import time
+import random
 
 from enum import Enum
 from datetime import datetime, timedelta
@@ -101,19 +103,36 @@ class SpotifyDriver:
             'lyrics': df_lyrics,
             'preview_url': preview_url
         }
+
+    @refresh_login
+    def search_track(self, track_name, artist):
+        type = SpotifySearchType.TRACK.value
+        query = f"{track_name} artist:{artist}"
+
+        url = f"{self.BASE_API_ADDRESS}{self.SEARCH_API}"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+        }
+        params = {
+            "type": type,
+            "q": query
+        }
+        rsp = requests.get(url, headers=headers, params=params)
+
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to search in spotify: {rsp.json()}")
+
+        rsp_json = rsp.json()
+
+        items = rsp_json.get('tracks').get('items')
+        if len(items) == 0:
+            raise RuntimeError(f"No tracks found for {query}")
+
+        return items[0]
     
     @refresh_login
     def get_track(self, track_id):
-        # url = f"{self.BASE_API_ADDRESS}/tracks/{track_id}"
-        # headers = {
-        #     "Authorization": f"Bearer {self.token}",
-        # }
-        # rsp = requests.get(url, headers=headers)
 
-        # if rsp.status_code > 299:
-        #     raise RuntimeError(f"Failed to get track from spotify: {rsp.json()}")
-
-        # track = rsp.json()
         df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
         
         return {
@@ -168,6 +187,10 @@ class SpotifyLyricsDriver:
 
         self.BASE_API_ADDRESS = "https://spclient.wg.spotify.com/color-lyrics/v2"
         self.SEARCH_API = "/track/{track_id}"
+        
+        # Retry settings for rate limiting
+        self.max_retries = 5
+        self.base_delay = 1  # starting delay in seconds
 
     def login(self):
         if datetime.now() < self.datetime_to_ask_new_token:
@@ -175,27 +198,47 @@ class SpotifyLyricsDriver:
 
         url = f"{self.BASE_AUTH_ADDRESS}{self.TOKEN_URI}"
 
-
         headers = {
             'content-type': 'text/html; charset=utf-8',
             'app-platform': 'WebPlayer',
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36',
-            "cookie" : f"sp_dc={getenv("SPOTIFY_SD_DC")}"
+            "cookie" : f"sp_dc={getenv('SPOTIFY_SD_DC')}"
         }
 
-        rsp = requests.get(url, headers=headers)
-        # print(f"isAnonymous: {rsp.json().get('isAnonymous')}")
-
-        if rsp.status_code > 299:
-            raise RuntimeError(f"Failed to refresh token to get lyrics: {rsp.json()}")
-
-        # print(f"Token found: {rsp.json()['accessToken']}")
-        self.token = rsp.json()['accessToken']
-
-        # Store token expiration time
-        expires_in = rsp.json()['accessTokenExpirationTimestampMs']
-        self.datetime_to_ask_new_token = datetime.fromtimestamp(expires_in / 1000)
-
+        # Implement retry with exponential backoff
+        retries = 0
+        while retries <= self.max_retries:
+            rsp = requests.get(url, headers=headers)
+            
+            # Success case
+            if rsp.status_code < 300:
+                self.token = rsp.json()['accessToken']
+                # Store token expiration time
+                expires_in = rsp.json()['accessTokenExpirationTimestampMs']
+                self.datetime_to_ask_new_token = datetime.fromtimestamp(expires_in / 1000)
+                return
+            
+            # Rate limit case - retry with backoff
+            if rsp.status_code == 429:
+                retries += 1
+                if retries > self.max_retries:
+                    break
+                    
+                # Get retry-after header if available, otherwise use exponential backoff
+                retry_after = int(rsp.headers.get('Retry-After', 0))
+                wait_time = retry_after if retry_after > 0 else self.base_delay * (2 ** (retries - 1))
+                
+                # Add jitter to avoid thundering herd
+                wait_time = wait_time * (1 + random.random() * 0.1)
+                
+                print(f"Rate limited. Retrying in {wait_time:.2f} seconds... (Attempt {retries}/{self.max_retries})")
+                time.sleep(wait_time)
+            else:
+                # Other errors, don't retry
+                break
+                
+        # If we got here, we've either exceeded max retries or encountered a non-retryable error
+        raise RuntimeError(f"Failed to refresh token to get lyrics: {rsp.reason} (Status: {rsp.status_code})")
 
 
     @refresh_login

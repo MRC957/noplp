@@ -5,3 +5,8 @@ groq
 requests
 pandas
 python-dotenv
+eventlet
+psycopg2-binary
+SQLAlchemy
+Flask-SQLAlchemy
+alembic

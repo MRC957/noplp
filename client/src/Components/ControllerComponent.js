@@ -12,13 +12,15 @@ const ControllerComponent = () => {
         proposedLyrics: '',
         expectedWords: 0,
         trackId: '',
-        songResults: {}
+        songResults: {},
+        availablePlaylists: [],
+        currentPlaylist: 'playlist'
     });
 
     const proposedLyricsRef = useRef(null);
     const socket = useRef(null);
 
-    // Initialize socket
+    // Initialize socket and fetch playlists
     useEffect(() => {
         console.log('Getting shared socket connection from socketManager');
         socket.current = getSocket();
@@ -49,24 +51,64 @@ const ControllerComponent = () => {
             }
         });
 
-        // Load playlist
-        fetch('http://localhost:4001/api/playlist')
-            .then(response => response.json())
-            .then((data) => {
-                setState(prevState => ({
-                    ...prevState,
-                    playlist: data
-                }));
-            })
-            .catch(error => {
-                console.error('Error fetching playlist:', error);
-            });
+        // Fetch available playlists
+        fetchPlaylists();
 
         // Cleanup function
         return () => {
             socket.current = null;
         };
     }, []);
+
+    // Load playlist when currentPlaylist changes
+    useEffect(() => {
+        loadPlaylist(state.currentPlaylist);
+    }, [state.currentPlaylist]);
+
+    // Fetch available playlists from the server
+    const fetchPlaylists = () => {
+        fetch('http://localhost:4001/api/playlists')
+            .then(response => response.json())
+            .then((data) => {
+                setState(prevState => ({
+                    ...prevState,
+                    availablePlaylists: data
+                }));
+                console.log('Available playlists:', data);
+            })
+            .catch(error => {
+                console.error('Error fetching playlists:', error);
+            });
+    };
+
+    // Load the selected playlist
+    const loadPlaylist = (playlistName) => {
+        fetch(`http://localhost:4001/api/playlist?name=${playlistName}`)
+            .then(response => response.json())
+            .then((data) => {
+                setState(prevState => ({
+                    ...prevState,
+                    playlist: data
+                }));
+                console.log(`Loaded playlist: ${playlistName}`, data);
+            })
+            .catch(error => {
+                console.error(`Error fetching playlist ${playlistName}:`, error);
+            });
+    };
+
+    // Handle playlist change
+    const handlePlaylistChange = (event) => {
+        const selectedPlaylist = event.target.value;
+        setState(prevState => ({
+            ...prevState,
+            currentPlaylist: selectedPlaylist,
+            // Reset picked items when changing playlists
+            pickedSongs: [],
+            pickedCategories: [],
+            songResults: {}
+        }));
+    };
 
     const handleReset = () => {
         console.log('Reseting');
@@ -285,6 +327,20 @@ const ControllerComponent = () => {
     return (
         <div className="controller">
             <div className="service">
+                <div className="playlist-selector">
+                    <label htmlFor="playlist-select">Playlist: </label>
+                    <select 
+                        id="playlist-select"
+                        value={state.currentPlaylist} 
+                        onChange={handlePlaylistChange}
+                    >
+                        {state.availablePlaylists.map(playlist => (
+                            <option key={playlist.id} value={playlist.id}>
+                                {playlist.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
                 {/* <button onClick={handleFfaToggle}>FFA {state.ffaMode? 'On' : 'Off'}</button>
                 <button onClick={handlePerfModeToggle}>Perf {state.perfMode? 'On' : 'Off'}</button> */}
                 <button onClick={handleToIntro}>To intro</button>
