@@ -44,11 +44,44 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize database
 init_db(app)
 
+import requests
+class LrcLibDriver:
+    def __init__(self):
+        self.BASE_API_ADDRESS = "https://lrclib.net"
+        self.SEARCH_API = "/api/get"        
+
+    def get_lyrics(self, track_name, artist_name):
+        url = f"{self.BASE_API_ADDRESS}{self.SEARCH_API}"
+        headers = {}
+        params = {
+            "track_name": track_name,
+            "artist_name": artist_name
+        }
+
+        rsp = requests.get(url, headers=headers, params=params)
+
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to search in lrclib: {rsp.json()}")
+        
+        list_lyrics_raw = rsp.json().get("syncedLyrics").split("\n")
+        list_lyrics = []
+        for lyrics in list_lyrics_raw:
+            if lyrics:
+                startTimeMs, words = lyrics.split("] ", 1)
+                minutes, seconds = startTimeMs[1:].split(":", 1)
+                startTimeMs = (60 * float(minutes) + float(seconds)) * 1000
+                list_lyrics.append((startTimeMs, words))
+        df_lyrics = pd.DataFrame(list_lyrics, columns=["startTimeMs", "words"])
+
+        return df_lyrics
+
+
 class SongPopulator:
     def __init__(self):
         """Initialize the SongPopulator with Spotify drivers"""
         self.spotify_driver = SpotifyDriver()
-        self.lyrics_driver = SpotifyLyricsDriver()
+        # self.lyrics_driver = SpotifyLyricsDriver()
+        self.lyrics_driver = LrcLibDriver()
 
     def add_song_to_db(self, artist, title):
         """
@@ -86,10 +119,17 @@ class SongPopulator:
             
             # Create new song record
             with app.app_context():
+                
+                
+                df_lyrics = self.lyrics_driver.get_lyrics(song_data['name'], song_data['artists'][0]["name"])
+                list_lyrics = df_lyrics.to_dict(orient='records')
+                
+
                 new_song = Song(
                     id=song_data['id'],
                     title=song_data['name'],
                     artist=song_data['artists'][0]['name'],
+                    lyrics=list_lyrics
                     # track_id=song_data['id'],
                     # image_url=song_data.get('album', {}).get('images', [{}])[0].get('url', ''),
                     # preview_url=song_data.get('preview_url', '')

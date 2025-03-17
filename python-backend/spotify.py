@@ -38,7 +38,7 @@ class SpotifyDriver:
         self.BASE_API_ADDRESS = "https://api.spotify.com/v1"
         self.SEARCH_API = "/search"
 
-        self.login()
+        # self.login()
 
     def login(self):
         if datetime.now() < self.datetime_to_ask_new_token:
@@ -141,17 +141,17 @@ class SpotifyDriver:
             # 'uri': f"spotify:track:{track_id}"  # Replace preview_url with uri
         }
 
-    def get_auth_url(self):
-        scope = "streaming user-read-email user-read-private"
-        redirect_uri = "http://localhost:3000/callback"
-        auth_url = f"{self.BASE_AUTH_ADDRESS}/authorize"
-        params = {
-            "client_id": self.client_id,
-            "response_type": "code",
-            "scope": scope,
-            "redirect_uri": redirect_uri
-        }
-        return f"{auth_url}?{urllib.parse.urlencode(params)}"
+    # def get_auth_url(self):
+    #     scope = "streaming user-read-email user-read-private"
+    #     redirect_uri = "http://localhost:3000/callback"
+    #     auth_url = f"{self.BASE_AUTH_ADDRESS}/authorize"
+    #     params = {
+    #         "client_id": self.client_id,
+    #         "response_type": "code",
+    #         "scope": scope,
+    #         "redirect_uri": redirect_uri
+    #     }
+    #     return f"{auth_url}?{urllib.parse.urlencode(params)}"
 
     def get_user_token(self, code):
         redirect_uri = "http://localhost:3000/callback"
@@ -178,7 +178,8 @@ class SpotifyDriver:
 class SpotifyLyricsDriver:
     def __init__(self) -> None:
         # Refresh via https://open.spotify.com/get_access_token
-        self.token = None
+        # self.token = None
+        self.token = "2503169045e193624f61c68b7f7eb0ba207002167845260224315b"
         self.datetime_to_ask_new_token = datetime.now()
 
 
@@ -193,6 +194,7 @@ class SpotifyLyricsDriver:
         self.base_delay = 1  # starting delay in seconds
 
     def login(self):
+        return
         if datetime.now() < self.datetime_to_ask_new_token:
             return
 
@@ -202,7 +204,7 @@ class SpotifyLyricsDriver:
             'content-type': 'text/html; charset=utf-8',
             'app-platform': 'WebPlayer',
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36',
-            "cookie" : f"sp_dc={getenv('SPOTIFY_SD_DC')}"
+            "cookie" : f"sp_dc={getenv('SPOTIFY_SP_DC')}"
         }
 
         # Implement retry with exponential backoff

@@ -163,7 +163,7 @@ def get_lyrics(track_id, words_to_guess=5):
             
             if song and song.lyrics:
                 # Convert to DataFrame for compatibility with the rest of the code
-                df_lyrics = pd.DataFrame(song.lyrics)
+                df_lyrics = pd.DataFrame(song.lyrics, columns=['startTimeMs', 'words'])
                 
                 if not df_lyrics.empty:
                     list_lyrics["lyrics"] = song.lyrics
