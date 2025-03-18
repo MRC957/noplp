@@ -130,7 +130,7 @@ def get_playlist():
             playlist_path = os.path.join('client', 'public', 'playlists', 'playlist.json')
             
         # Read the playlist JSON file
-        with open(playlist_path, 'r') as f:
+        with open(playlist_path, 'r', encoding='utf-8') as f:
             playlist = json.load(f)
             
         for cat in playlist['categories']:

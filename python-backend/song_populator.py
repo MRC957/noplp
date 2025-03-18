@@ -241,6 +241,121 @@ class SongPopulator:
                 'error': str(e)
             }
 
+    def search_theme(self, theme_query, limit=10):
+        """
+        Search for playlists on Spotify based on a theme query
+        
+        Args:
+            theme_query: The search query for the theme
+            limit: Maximum number of playlists to return
+            
+        Returns:
+            list: List of playlist information dictionaries
+        """
+        try:
+            logger.info(f"Searching for playlists with theme: {theme_query}")
+            
+            # Search for playlists on Spotify
+            playlists = self.spotify_driver.search_playlists(theme_query, limit)
+            
+            if not playlists:
+                logger.error(f"No playlists found for theme: {theme_query}")
+                return []
+                
+            # Format for display
+            result = []
+            for i, playlist in enumerate(playlists):
+                try:
+                    if not playlist: continue
+                    
+                    result.append({
+                        'index': i + 1,
+                        'id': playlist['id'],
+                        'name': playlist['name'],
+                        'owner': playlist['owner']['display_name'],
+                        'tracks_count': playlist['tracks']['total']
+                    })
+                except Exception as e:
+                    logger.exception(f"Error processing playlist: {str(e)}")
+                
+            return result
+                
+        except Exception as e:
+            logger.exception(f"Error searching for theme: {str(e)}")
+            return []
+
+    def add_songs_by_theme(self, playlist_id, max_songs=20):
+        """
+        Add songs from a Spotify playlist to the database
+        
+        Args:
+            playlist_id: The Spotify playlist ID
+            max_songs: Maximum number of songs to add (default: 20)
+            
+        Returns:
+            dict: Summary of the operation
+        """
+        try:
+            logger.info(f"Adding songs from playlist: {playlist_id}, max: {max_songs}")
+            
+            # Get tracks from the playlist
+            tracks = self.spotify_driver.get_playlist_tracks(playlist_id, limit=max_songs)
+            
+            if not tracks:
+                logger.error(f"No tracks found in playlist: {playlist_id}")
+                return {
+                    'total': 0,
+                    'added': 0,
+                    'already_exists': 0,
+                    'failed': 0
+                }
+            
+            total_tracks = len(tracks)
+            added_count = 0
+            exists_count = 0
+            failed_count = 0
+            
+            for i, track in enumerate(tracks, 1):
+                artist_name = track['artists'][0]['name']
+                track_name = track['name']
+                
+                logger.info(f"Processing {i}/{total_tracks}: {track_name} by {artist_name}")
+                
+                try:
+                    result = self.add_song_to_db(artist_name, track_name)
+                    
+                    if result:
+                        if result.get('already_exists'):
+                            exists_count += 1
+                            logger.info(f"Song already exists: {track_name} by {artist_name}")
+                        else:
+                            added_count += 1
+                            logger.info(f"Added song: {track_name} by {artist_name}")
+                    else:
+                        failed_count += 1
+                        logger.error(f"Failed to add song: {track_name} by {artist_name}")
+                        
+                except Exception as e:
+                    failed_count += 1
+                    logger.exception(f"Error processing track: {str(e)}")
+            
+            return {
+                'total': total_tracks,
+                'added': added_count,
+                'already_exists': exists_count,
+                'failed': failed_count
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error adding songs by theme: {str(e)}")
+            return {
+                'total': 0,
+                'added': 0,
+                'already_exists': 0,
+                'failed': 1,
+                'error': str(e)
+            }
+
 
 def main():
     """Main entry point for the script"""
@@ -258,6 +373,17 @@ def main():
     fetch_parser = subparsers.add_parser('fetch-lyrics', help='Fetch lyrics for a song')
     fetch_parser.add_argument('-i', '--track-id', help='Spotify track ID')
     fetch_parser.add_argument('--all', action='store_true', help='Fetch lyrics for all songs without lyrics')
+    
+    # Add theme command
+    theme_parser = subparsers.add_parser('search-theme', help='Search for a theme/playlist on Spotify')
+    theme_parser.add_argument('-q', '--query', required=True, help='Search query for theme (e.g., "karaoke 2024")')
+    theme_parser.add_argument('-l', '--limit', type=int, default=10, help='Maximum number of results to show')
+    
+    # Add songs from theme command
+    add_theme_parser = subparsers.add_parser('add-theme', help='Add songs from a Spotify playlist')
+    add_theme_parser.add_argument('-p', '--playlist-id', required=True, help='Spotify playlist ID')
+    add_theme_parser.add_argument('-m', '--max-songs', type=int, default=20, 
+                                help='Maximum number of songs to add (default: 20)')
     
     args = parser.parse_args()
     
@@ -287,6 +413,33 @@ def main():
             print(f"  - {result['failure_count']} failed")
         else:
             print("Error: Either --track-id or --all must be specified")
+            
+    elif args.command == 'search-theme':
+        results = populator.search_theme(args.query, args.limit)
+        if results:
+            print(f"Found {len(results)} playlists for theme: '{args.query}'")
+            for playlist in results:
+                print(f"{playlist['index']}. {playlist['name']}")
+                print(f"   ID: {playlist['id']}")
+                print(f"   Owner: {playlist['owner']}")
+                print(f"   Tracks: {playlist['tracks_count']}")
+                print()
+
+                result = populator.add_songs_by_theme(playlist['id'], args.limit)
+                print(f"Processed {result['total']} tracks:")
+                print(f"  - {result['added']} added")
+                print(f"  - {result['already_exists']} already existed")
+                print(f"  - {result['failed']} failed")
+        else:
+            print(f"No playlists found for theme: '{args.query}'")
+            
+    elif args.command == 'add-theme':
+        result = populator.add_songs_by_theme(args.playlist_id, args.max_songs)
+        print(f"Processed {result['total']} tracks:")
+        print(f"  - {result['added']} added")
+        print(f"  - {result['already_exists']} already existed")
+        print(f"  - {result['failed']} failed")
+        
     else:
         parser.print_help()
 

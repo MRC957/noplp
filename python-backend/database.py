@@ -22,6 +22,7 @@ class Song(db.Model):
     artist = Column(String(255), nullable=False)
     title = Column(String(255), nullable=False)
     lyrics = Column(JSON, nullable=True)  # Store lyrics as JSON array of {startTimeMs, words}
+    release_year = Column(Integer, nullable=True)  # Add this line to store release year
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     
@@ -37,6 +38,7 @@ class Song(db.Model):
             'track_id': self.id,  # For backward compatibility
             'artist': self.artist,
             'title': self.title,
+            'release_year': self.release_year,
             'categories': [category.id for category in self.categories],
             'lyrics': self.lyrics or []
         }

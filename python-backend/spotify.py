@@ -11,9 +11,9 @@ from enum import Enum
 from datetime import datetime, timedelta
 
 def refresh_login(f):
-    def wrapper(*args):
+    def wrapper(*args, **kwargs):
         args[0].login()
-        return f(*args)
+        return f(*args, **kwargs)
     return wrapper
 
 class SpotifySearchType(Enum):
@@ -140,6 +140,71 @@ class SpotifyDriver:
             'lyrics': df_lyrics,
             # 'uri': f"spotify:track:{track_id}"  # Replace preview_url with uri
         }
+
+    @refresh_login
+    def search_playlists(self, query, limit=10):
+        """
+        Search for playlists that match the given query
+        
+        Args:
+            query: Search query string
+            limit: Maximum number of results to return (default: 10)
+            
+        Returns:
+            list: List of playlist objects
+        """
+        url = f"{self.BASE_API_ADDRESS}{self.SEARCH_API}"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+        }
+        params = {
+            "type": SpotifySearchType.PLAYLIST.value,
+            "q": query,
+            "limit": limit
+        }
+        rsp = requests.get(url, headers=headers, params=params)
+
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to search playlists in Spotify: {rsp.json()}")
+
+        rsp_json = rsp.json()
+        
+        items = rsp_json.get('playlists', {}).get('items', [])
+        return items
+        
+    @refresh_login
+    def get_playlist_tracks(self, playlist_id, limit=50):
+        """
+        Get tracks from a playlist
+        
+        Args:
+            playlist_id: Spotify playlist ID
+            limit: Maximum number of tracks to return (default: 50)
+            
+        Returns:
+            list: List of track objects
+        """
+        url = f"{self.BASE_API_ADDRESS}/playlists/{playlist_id}/tracks"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+        }
+        params = {
+            # "limit": limit
+        }
+        
+        rsp = requests.get(url, headers=headers, params=params)
+
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to get playlist tracks from Spotify: {rsp.json()}")
+
+        tracks = []
+        rsp_json = rsp.json()
+        
+        for item in rsp_json.get('items', []):
+            if item.get('track'):
+                tracks.append(item.get('track'))
+                
+        return tracks
 
     # def get_auth_url(self):
     #     scope = "streaming user-read-email user-read-private"

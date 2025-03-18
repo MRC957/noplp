@@ -269,6 +269,41 @@ class DatabasePopulator:
                     playlist['songs'].append(song_dict)
             
             return playlist
+    
+    def import_songs_from_csv_with_categories(self, csv_file):
+        """Import songs from CSV file with enhanced categorization"""
+        try:
+            # Use the EnhancedSongCategorizer for this operation
+            from categorize_songs import EnhancedSongCategorizer
+            
+            categorizer = EnhancedSongCategorizer()
+            
+            # Read songs from CSV
+            songs = categorizer.read_song_list(csv_file)
+            if not songs:
+                logger.error("No songs found in CSV or error reading file")
+                return False
+                
+            logger.info(f"Found {len(songs)} songs in CSV")
+            
+            # Process songs with categorization
+            categorizer.process_songs(songs)
+            logger.info("Songs have been imported with categories")
+            
+            # Optionally fetch lyrics
+            if input("Do you want to fetch lyrics for the imported songs? (y/n): ").lower() == 'y':
+                with self.app.app_context():
+                    songs = Song.query.all()
+                    categorizer.fetch_lyrics_for_songs(songs)
+            
+            return True
+            
+        except ImportError:
+            logger.error("EnhancedSongCategorizer not found. Make sure categorize_songs.py is available.")
+            return False
+        except Exception as e:
+            logger.exception(f"Error importing songs from CSV with categorization: {str(e)}")
+            return False
 
 def populate_db_command(app):
     """CLI command to populate database"""
@@ -311,6 +346,9 @@ if __name__ == "__main__":
             artist = sys.argv[3]
             category_ids = sys.argv[4] if len(sys.argv) > 4 else None
             populator.search_and_add_song(track_name, artist, category_ids)
+        elif action == 'import_csv_with_categories' and len(sys.argv) > 2:
+            csv_file = sys.argv[2]
+            populator.import_songs_from_csv_with_categories(csv_file)
     else:
         # Default action
         populator.import_playlists_from_json()
