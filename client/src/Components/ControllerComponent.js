@@ -14,7 +14,9 @@ const ControllerComponent = () => {
         trackId: '',
         songResults: {},
         availablePlaylists: [],
-        currentPlaylist: 'playlist'
+        currentPlaylist: 'playlist',
+        newPlaylistName: '',
+        showSavePlaylist: false
     });
 
     const proposedLyricsRef = useRef(null);
@@ -284,6 +286,69 @@ const ControllerComponent = () => {
         socket.current.emit('continue-lyrics');
     };
 
+    // Handle input for new playlist name
+    const handleNewPlaylistNameChange = (evt) => {
+        setState(prevState => ({
+            ...prevState,
+            newPlaylistName: evt.target.value
+        }));
+    };
+
+    // Toggle save playlist form visibility
+    const toggleSavePlaylistForm = () => {
+        setState(prevState => ({
+            ...prevState,
+            showSavePlaylist: !prevState.showSavePlaylist,
+            newPlaylistName: prevState.currentPlaylist // Initialize with current name
+        }));
+    };
+
+    // Save current playlist with new name
+    const handleSavePlaylist = () => {
+        if (!state.newPlaylistName.trim()) {
+            alert("Please enter a valid playlist name");
+            return;
+        }
+
+        // Prepare the playlist data to save
+        const playlistToSave = {
+            ...state.playlist,
+            name: state.newPlaylistName,
+            id: state.newPlaylistName // Use name as ID as well
+        };
+
+        // Send to server to save
+        fetch('http://localhost:4001/api/playlist/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(playlistToSave),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Playlist saved successfully:', data);
+            
+            // Update available playlists and select the newly saved one
+            fetchPlaylists();
+            
+            setState(prevState => ({
+                ...prevState,
+                currentPlaylist: state.newPlaylistName,
+                showSavePlaylist: false
+            }));
+        })
+        .catch(error => {
+            console.error('Error saving playlist:', error);
+            alert("Failed to save playlist. Please try again.");
+        });
+    };
+
     // Render logic
     const songList = state.playlist.songs || [];
     const categories = (state.playlist.categories || []).map(c => {
@@ -341,14 +406,38 @@ const ControllerComponent = () => {
                         ))}
                     </select>
                 </div>
-                {/* <button onClick={handleFfaToggle}>FFA {state.ffaMode? 'On' : 'Off'}</button>
-                <button onClick={handlePerfModeToggle}>Perf {state.perfMode? 'On' : 'Off'}</button> */}
+                <button onClick={toggleSavePlaylistForm}>
+                    {state.showSavePlaylist ? 'Cancel' : 'Save Playlist As'}
+                </button>
                 <button onClick={handleToIntro}>To intro</button>
                 <button onClick={handleToCategories}>To Categories</button>
                 <button className="warn" onClick={handleReset}> RESET </button>
             </div>
             
-            <div className="track-id-form">
+            {state.showSavePlaylist && (
+                <div className="save-playlist-form">
+                    <div className="form-group">
+                        <label htmlFor="newPlaylistName">New Playlist Name:</label>
+                        <input 
+                            id="newPlaylistName"
+                            type="text" 
+                            placeholder="Enter new playlist name" 
+                            value={state.newPlaylistName}
+                            onChange={handleNewPlaylistNameChange}
+                            className="playlist-name-input"
+                        />
+                        <button 
+                            onClick={handleSavePlaylist} 
+                            disabled={!state.newPlaylistName.trim()} 
+                            className="save-playlist-button"
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {/* <div className="track-id-form">
                 <div className="form-group">
                     <label htmlFor="trackId">Spotify Track ID:</label>
                     <input 
@@ -370,7 +459,7 @@ const ControllerComponent = () => {
                 <div className="helper-text">
                     Enter a Spotify Track ID and click "Play Track" to play it directly
                 </div>
-            </div>
+            </div> */}
             
             <div className="lyrics-form">
                 <input  

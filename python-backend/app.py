@@ -338,6 +338,61 @@ def get_database_stats():
         logger.exception(f"Error getting database stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# Add endpoint to save a playlist
+@app.route('/api/playlist/save', methods=['POST'])
+def save_playlist():
+    try:
+        # Get playlist data from request body
+        playlist_data = request.json
+        
+        if not playlist_data:
+            return jsonify({"error": "No playlist data provided"}), 400
+        
+        # Validate required fields
+        if 'name' not in playlist_data:
+            return jsonify({"error": "Playlist name is required"}), 400
+        
+        # Ensure playlist has categories and songs
+        elif 'categories' not in playlist_data or not playlist_data['categories']:
+            return jsonify({"error": "Playlist must have categories"}), 400
+        
+        elif 'songs' not in playlist_data or not playlist_data['songs']:
+            return jsonify({"error": "Playlist must have songs"}), 400
+        
+        else:
+            playlist_data.pop("id")
+            # Keep only necessary song data
+            filtered_songs = []
+            for song in playlist_data['songs']:
+                filtered_song = {k: song[k] for k in ["id", "track_id", "category", "artist", "title"] if k in song}
+                filtered_songs.append(filtered_song)
+            playlist_data['songs'] = filtered_songs
+
+        # Sanitize the playlist name for use as a filename
+        playlist_name = playlist_data['name'].replace(' ', '_').lower()
+        
+        # Create playlists directory if it doesn't exist
+        playlists_dir = os.path.join('client', 'public', 'playlists')
+        os.makedirs(playlists_dir, exist_ok=True)
+        
+        # Save the playlist to a JSON file
+        playlist_path = os.path.join(playlists_dir, f'{playlist_name}.json')
+        
+        with open(playlist_path, 'w', encoding='utf-8') as f:
+            json.dump(playlist_data, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"Playlist '{playlist_name}' saved successfully to {playlist_path}")
+        
+        return jsonify({
+            "message": f"Playlist '{playlist_name}' saved successfully",
+            "id": playlist_name,
+            "name": playlist_data['name']
+        }), 200
+        
+    except Exception as e:
+        logger.exception(f"Error saving playlist: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 # Socket.IO error handling decorator
 def handle_socket_errors(f):
     def wrapped(*args, **kwargs):

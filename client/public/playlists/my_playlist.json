@@ -1,0 +1,107 @@
+{
+  "categories": [
+    {
+      "difficulty": 10,
+      "expected_words": 2,
+      "id": "7acf4687-3ea9-4120-bea4-97428d8a8530",
+      "name": "Rap & Hip-Hop"
+    },
+    {
+      "difficulty": 20,
+      "expected_words": 3,
+      "id": "9ccadeaf-d1fa-4445-a035-c5841bce8e5f",
+      "name": "Chanson française"
+    },
+    {
+      "difficulty": 30,
+      "expected_words": 4,
+      "id": "040c95e7-46b6-418c-b969-1cfcac39e356",
+      "name": "Variété diverse"
+    },
+    {
+      "difficulty": 40,
+      "expected_words": 5,
+      "id": "f3660867-5b91-4931-b05b-50041e71ebe7",
+      "name": "Années 80"
+    },
+    {
+      "difficulty": 50,
+      "expected_words": 6,
+      "id": "a7e0043f-6a8f-477c-b8d3-9c56d10c316b",
+      "name": "Voyage & Évasion"
+    }
+  ],
+  "name": "my playlist",
+  "songs": [
+    {
+      "id": "2RqZ8JUBXP4C0nzttGnTL1",
+      "track_id": "2RqZ8JUBXP4C0nzttGnTL1",
+      "category": "7acf4687-3ea9-4120-bea4-97428d8a8530",
+      "artist": "Corneille",
+      "title": "Avec classe (feat. Aya Nakamura & Trinix)"
+    },
+    {
+      "id": "3q4xu3wPRfJm9l3pDQ6UPb",
+      "track_id": "3q4xu3wPRfJm9l3pDQ6UPb",
+      "category": "7acf4687-3ea9-4120-bea4-97428d8a8530",
+      "artist": "Orelsan",
+      "title": "Discipline"
+    },
+    {
+      "id": "7KhNIxSqia0AnFsdycIrxV",
+      "track_id": "7KhNIxSqia0AnFsdycIrxV",
+      "category": "9ccadeaf-d1fa-4445-a035-c5841bce8e5f",
+      "artist": "Renaud",
+      "title": "Putain de camion"
+    },
+    {
+      "id": "0Y04xGwKImCqVSFZQI5All",
+      "track_id": "0Y04xGwKImCqVSFZQI5All",
+      "category": "9ccadeaf-d1fa-4445-a035-c5841bce8e5f",
+      "artist": "Serge Gainsbourg",
+      "title": "La chanson de Prévert"
+    },
+    {
+      "id": "7iwLg0vv7xCrP7x7UEJoCq",
+      "track_id": "7iwLg0vv7xCrP7x7UEJoCq",
+      "category": "040c95e7-46b6-418c-b969-1cfcac39e356",
+      "artist": "Eddy Mitchell",
+      "title": "La dernière séance"
+    },
+    {
+      "id": "2EdqnePuFG7FDPsiy5YGov",
+      "track_id": "2EdqnePuFG7FDPsiy5YGov",
+      "category": "040c95e7-46b6-418c-b969-1cfcac39e356",
+      "artist": "Véronique Sanson",
+      "title": "Besoin de personne"
+    },
+    {
+      "id": "3ghTdLI4jkI6sTfCNL5PhX",
+      "track_id": "3ghTdLI4jkI6sTfCNL5PhX",
+      "category": "f3660867-5b91-4931-b05b-50041e71ebe7",
+      "artist": "Daniel Balavoine",
+      "title": "Ma musique et mon patois"
+    },
+    {
+      "id": "0HAxxVEr28mftsgSs4Omid",
+      "track_id": "0HAxxVEr28mftsgSs4Omid",
+      "category": "f3660867-5b91-4931-b05b-50041e71ebe7",
+      "artist": "France Gall",
+      "title": "Débranche - Remasterisé en 2004"
+    },
+    {
+      "id": "4gdq8ETGwZDx1Hf7FObRTe",
+      "track_id": "4gdq8ETGwZDx1Hf7FObRTe",
+      "category": "a7e0043f-6a8f-477c-b8d3-9c56d10c316b",
+      "artist": "Salvatore Adamo",
+      "title": "Les filles du bord de mer"
+    },
+    {
+      "id": "4O1JvKJX1rRjrtZUSoWrkr",
+      "track_id": "4O1JvKJX1rRjrtZUSoWrkr",
+      "category": "a7e0043f-6a8f-477c-b8d3-9c56d10c316b",
+      "artist": "De Palmas",
+      "title": "Sur la route"
+    }
+  ]
+}
