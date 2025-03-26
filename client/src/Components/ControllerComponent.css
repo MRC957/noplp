@@ -1,3 +1,119 @@
+/* Category and song change functionality styles */
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.category-header .title {
+    flex: 1;
+}
+
+.edit-button {
+    background-color: #28a745; /* Green background */
+    color: white; /* White icon for contrast */
+    font-size: 0.8em;
+    padding: 6px;
+    width: 30px;
+    height: 30px;
+    min-width: unset;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.edit-button:hover {
+    background-color: #218838; /* Darker green on hover */
+}
+
+.edit-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.song-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 5px;
+}
+
+/* New class for song buttons */
+.song-button {
+    flex: 1;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.song-button.success {
+    background-color: #28a745;
+    color: white;
+}
+
+.song-button.failure {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* The song-container's first button inherits from song-button */
+.song-container button:first-child {
+    flex: 1;
+}
+
+.category.changing {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.category.changing .title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    background-color: transparent;
+    color: #212529;
+    cursor: default;
+}
+
+.category-selector,
+.song-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.category-option,
+.song-option {
+    background-color: #e9ecef;
+    color: #212529;
+    border: 1px solid #ced4da;
+}
+
+.category-option:hover,
+.song-option:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.select-prompt {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.song-selector {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
 .controller {
     display: flex;
     flex-direction: column;
@@ -103,17 +219,6 @@ button {
     flex: 1;
 }
 
-/* Song button styling based on validation status */
-button.success {
-    background-color: #4CAF50; /* Green for success */
-    color: white;
-}
-
-button.failure {
-    background-color: #f44336; /* Red for failure */
-    color: white;
-}
-
 .category .title {
     flex: 1;
     background-color: #007bff;
@@ -133,7 +238,8 @@ button.failure {
     gap: 10px;
 }
 
-.category .songs button {
+/* Replacing this with the song-button class */
+.category .songs .song-button {
     background-color: #f8f9fa;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -142,12 +248,12 @@ button.failure {
     font-size: 14px;
 }
 
-.category .songs button.success {
+.category .songs .song-button.success {
     background-color: #28a745;
     color: white;
 }
 
-.category .songs button.failure {
+.category .songs .song-button.failure {
     background-color: #dc3545;
     color: white;
 }

@@ -143,6 +143,47 @@ def get_playlist():
         logger.exception(f"Error getting playlist: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# New endpoint to get all categories from the database
+@app.route('/api/categories', methods=['GET'])
+def get_all_categories():
+    try:
+        # First check if database needs initialization
+        initialize_database()
+        
+        with app.app_context():
+            categories = Category.query.all()
+            categories_data = [category.to_dict() for category in categories]
+            return jsonify(categories_data)
+    except Exception as e:
+        logger.exception(f"Error getting categories: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# New endpoint to get songs for a specific category
+@app.route('/api/songs', methods=['GET'])
+def get_songs():
+    try:
+        # Get category ID from query parameter, if provided
+        category_id = request.args.get('category_id')
+        
+        with app.app_context():
+            if category_id:
+                # Get category
+                category = Category.query.get(category_id)
+                if not category:
+                    return jsonify({"error": f"Category with ID {category_id} not found"}), 404
+                
+                # Get songs for the category
+                songs = category.songs
+            else:
+                # Get all songs if no category specified
+                songs = Song.query.all()
+                
+            songs_data = [song.to_dict() for song in songs]
+            return jsonify(songs_data)
+    except Exception as e:
+        logger.exception(f"Error getting songs: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 DEFAULT_WORDS_TO_GUESS = 5
 MAX_RECURSION_DEPTH = 5  # Add a limit to prevent infinite recursion
 

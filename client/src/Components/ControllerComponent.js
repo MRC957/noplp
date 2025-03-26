@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { getSocket } from "../hooks/socketManager";
 import './ControllerComponent.css';
 
+// Add edit icon as SVG component for better styling and control
+const EditIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+    </svg>
+);
+
 const ControllerComponent = () => {
     const [state, setState] = useState({
         playlist: {},
@@ -16,7 +23,12 @@ const ControllerComponent = () => {
         availablePlaylists: [],
         currentPlaylist: 'playlist',
         newPlaylistName: '',
-        showSavePlaylist: false
+        showSavePlaylist: false,
+        // New state variables for category and song selection
+        changingCategoryId: null,
+        changingSongId: null,
+        availableCategories: [],
+        availableSongs: []
     });
 
     const proposedLyricsRef = useRef(null);
@@ -303,6 +315,139 @@ const ControllerComponent = () => {
         }));
     };
 
+    // Functions to handle category and song changes
+    const fetchAllCategories = () => {
+        fetch('http://localhost:4001/api/categories')
+            .then(response => response.json())
+            .then((data) => {
+                setState(prevState => ({
+                    ...prevState,
+                    availableCategories: data
+                }));
+                console.log('Available categories:', data);
+            })
+            .catch(error => {
+                console.error('Error fetching categories:', error);
+            });
+    };
+
+    const fetchSongsForCategory = (categoryId) => {
+        fetch(`http://localhost:4001/api/songs?category_id=${categoryId}`)
+            .then(response => response.json())
+            .then((data) => {
+                setState(prevState => ({
+                    ...prevState,
+                    availableSongs: data
+                }));
+                console.log(`Songs for category ${categoryId}:`, data);
+            })
+            .catch(error => {
+                console.error(`Error fetching songs for category ${categoryId}:`, error);
+            });
+    };
+
+    const handleChangeCategory = (categoryId) => {
+        // Fetch all available categories
+        fetchAllCategories();
+        
+        setState(prevState => ({
+            ...prevState,
+            changingCategoryId: categoryId
+        }));
+    };
+
+    const handleChangeSong = (songId, categoryId) => {
+        // Fetch all available songs for this category
+        fetchSongsForCategory(categoryId);
+        
+        setState(prevState => ({
+            ...prevState,
+            changingSongId: songId
+        }));
+    };
+
+    const handleSelectNewCategory = (categoryId) => {
+        // Update the playlist with the new category
+        if (!categoryId || !state.changingCategoryId) return;
+        
+        // Find the old category that's being replaced
+        const oldCategory = state.playlist.categories.find(c => c.id === state.changingCategoryId);
+        if (!oldCategory) return;
+        
+        // Find the new category details
+        const newCategory = state.availableCategories.find(c => c.id === categoryId);
+        if (!newCategory) return;
+        
+        // Get 2 random songs from this category (if available)
+        fetchSongsForCategory(categoryId);
+        
+        // Update the playlist with the new category and songs
+        setTimeout(() => {
+            // This timeout ensures that availableSongs has been populated
+            const songsForNewCategory = state.availableSongs.slice(0, 2);
+            
+            // Create updated playlist
+            const updatedPlaylist = {
+                ...state.playlist,
+                categories: state.playlist.categories.map(c => 
+                    c.id === state.changingCategoryId ? 
+                    { ...newCategory, difficulty: oldCategory.difficulty, expected_words: oldCategory.expected_words } : c
+                )
+            };
+            
+            // Update songs: remove old ones for this category and add new ones
+            const songsWithoutOldCategory = state.playlist.songs.filter(s => 
+                s.category !== state.changingCategoryId
+            );
+            
+            const newSongs = songsForNewCategory.map(s => ({
+                ...s,
+                category: categoryId
+            }));
+            
+            updatedPlaylist.songs = [...songsWithoutOldCategory, ...newSongs];
+            
+            // Update state
+            setState(prevState => ({
+                ...prevState,
+                playlist: updatedPlaylist,
+                changingCategoryId: null
+            }));
+            
+            console.log('Updated playlist with new category:', updatedPlaylist);
+        }, 500);
+    };
+
+    const handleSelectNewSong = (songId) => {
+        if (!songId || !state.changingSongId) return;
+        
+        // Find the song being replaced
+        const oldSong = state.playlist.songs.find(s => s.id === state.changingSongId);
+        if (!oldSong) return;
+        
+        // Find the new song
+        const newSong = state.availableSongs.find(s => s.id === songId);
+        if (!newSong) return;
+        
+        // Update the playlist
+        const updatedPlaylist = {
+            ...state.playlist,
+            songs: state.playlist.songs.map(s => 
+                s.id === state.changingSongId ? 
+                { ...newSong, category: oldSong.category } : s
+            )
+        };
+        
+        // Update state
+        setState(prevState => ({
+            ...prevState,
+            playlist: updatedPlaylist,
+            changingSongId: null
+        }));
+        
+        console.log('Updated playlist with new song:', updatedPlaylist);
+    };
+
     // Save current playlist with new name
     const handleSavePlaylist = () => {
         if (!state.newPlaylistName.trim()) {
@@ -359,26 +504,91 @@ const ControllerComponent = () => {
     });
 
     const categoriesElements = categories.map(cat => {
+        // If we're in category changing mode and this is the category being changed
+        if (state.changingCategoryId === cat.id) {
+            return (
+                <div className="category changing" key={`category-${cat.id}`}>
+                    <div className="title">Select new category to replace "{cat.name}":</div>
+                    <div className="category-selector">
+                        {state.availableCategories.map(availableCategory => (
+                            <button 
+                                key={availableCategory.id}
+                                onClick={() => handleSelectNewCategory(availableCategory.id)}
+                                className="category-option"
+                            >
+                                {availableCategory.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
         const songsElements = cat.songs.map(song => {
+            // If we're in song changing mode and this is the song being changed
+            if (state.changingSongId === song.id) {
+                return (
+                    <div className="song-selector" key={song.id}>
+                        <div className="select-prompt">Select a new song:</div>
+                        <div className="song-options">
+                            {state.availableSongs.map(availableSong => (
+                                <button 
+                                    key={availableSong.id}
+                                    onClick={() => handleSelectNewSong(availableSong.id)}
+                                    className="song-option"
+                                >
+                                    {availableSong.title} - {availableSong.artist}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+            
             // Determine button class based on validation result
-            let buttonClass = '';
+            let buttonClass = 'song-button';
             if (state.songResults.hasOwnProperty(song.id)) {
-                buttonClass = state.songResults[song.id] ? 'success' : 'failure';
+                buttonClass += state.songResults[song.id] ? ' success' : ' failure';
             }
             
             return (
-                <button 
-                    key={song.id} 
-                    className={buttonClass}
-                    onClick={() => handleToSong(song.id)}
-                >
-                    Go to "{song.title}"
-                </button>
+                <div className="song-container" key={song.id}>
+                    <button 
+                        className={buttonClass}
+                        onClick={() => handleToSong(song.id)}
+                    >
+                        Go to "{song.title}"
+                    </button>
+                    <button 
+                        className="edit-button"
+                        onClick={() => handleChangeSong(song.id, cat.id)}
+                        aria-label="Edit song"
+                        title="Edit song"
+                    >
+                        <EditIcon />
+                    </button>
+                </div>
             );
         }); 
+
         return (
             <div className="category" key={`category-${cat.id}`}>
-                <button className="title" key={cat.id} onClick={() => handleToSongList(cat.id)}>Go to "{cat.name}"</button>
+                <div className="category-header">
+                    <button 
+                        className="title" 
+                        onClick={() => handleToSongList(cat.id)}
+                    >
+                        Go to "{cat.name}"
+                    </button>
+                    <button 
+                        className="edit-button"
+                        onClick={() => handleChangeCategory(cat.id)}
+                        aria-label="Edit category"
+                        title="Edit category"
+                    >
+                        {/* <EditIcon /> */}
+                    </button>
+                </div>
                 <div className="songs">
                     {songsElements}
                 </div>
