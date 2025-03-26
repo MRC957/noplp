@@ -39,6 +39,8 @@
     align-items: center;
     gap: 5px;
     margin-bottom: 5px;
+    flex-basis: 48%; /* This makes each item take about half the container width minus gap */
+    min-width: 200px; /* Ensures reasonable minimum size */
 }
 
 /* New class for song buttons */
@@ -234,7 +236,7 @@ button {
 .category .songs {
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: space-between; /* Changed from flex-start to space-between for better space usage */
     gap: 10px;
 }
 

@@ -210,10 +210,10 @@ const ControllerComponent = () => {
         
         console.log('goto song', song);
         
-        if (state.ffaMode) {
-            song.guess_line = 9000;
-            song.guess_timecode = '99:00.00';
-        }
+        // if (state.ffaMode) {
+        //     song.guess_line = 9000;
+        //     song.guess_timecode = '99:00.00';
+        // }
         
         // Add track_id to the song object if it's available
         if (state.trackId) {
@@ -243,10 +243,10 @@ const ControllerComponent = () => {
             expectedWords: 8
         };
         
-        if (state.ffaMode) {
-            song.guess_line = 9000;
-            song.guess_timecode = '99:00.00';
-        }
+        // if (state.ffaMode) {
+        //     song.guess_line = 9000;
+        //     song.guess_timecode = '99:00.00';
+        // }
         
         console.log('submitting spotify track directly', song);
         socket.current.emit('goto-song', song);
