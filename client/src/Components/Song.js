@@ -16,7 +16,7 @@ import {
   STATE_LYRICS_CONTINUE
 } from "../constants/states";
 
-const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
+const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsToGuess = [], lyricsLoading = false, lyricsError = null }) => {
   // Player and audio states
   const [playerState, setPlayerState] = useState({
     playerReady: false,
@@ -30,8 +30,8 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   // Lyrics states
   const [lyricsState, setLyricsState] = useState({
     lyricsReady: false,
-    lyrics: [],             // Spotify API lyrics data
-    lyricsToGuess: [],
+    lyrics: [],             // Lyrics data provided by ControllerComponent
+    lyricsToGuess: [],      // Lyrics to guess provided by ControllerComponent
     currentLine: -1,
     currentLyricIndex: -1,
     lyricsLoading: false,
@@ -62,7 +62,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
   const preventRepeatedPauseRef = useRef(false); // Prevent immediate re-pause
   const hasInitializedRef = useRef(false); // Track if the current song has been initialized
   const cleanupInProgressRef = useRef(false); // Track if cleanup is in progress
-  const songLoadAbortControllerRef = useRef(null); // AbortController for fetch requests
   
   // Track the previous lyrics state to detect changes
   const previousLyricStateRef = useRef(STATE_LYRICS_NONE);
@@ -219,6 +218,21 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     }
   }, [song?.id, song?.track_id]);
 
+  // Update lyrics state when props change
+  useEffect(() => {
+    // Only update if we have actual lyrics data
+    if (lyrics && lyrics.length > 0) {
+      setLyricsState(prev => ({
+        ...prev,
+        lyrics,
+        lyricsToGuess,
+        lyricsReady: true,
+        lyricsLoading,
+        lyricsError
+      }));
+    }
+  }, [lyrics, lyricsToGuess, lyricsLoading, lyricsError]);
+
   // Start playing when everything is ready
   useEffect(() => {
     console.log('Checking playback conditions:', {
@@ -229,7 +243,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       hasSong: !!song
     });
 
-    // if (song && playerState.audioReady && lyricsState.lyricsReady && playerState.playerReady && !hasInitializedRef.current) {
     if (song && playerState.audioReady && lyricsState.lyricsReady && playerState.playerReady) {
       console.log("All conditions are OK to start playback");
       hasInitializedRef.current = true;
@@ -244,15 +257,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     cleanupInProgressRef.current = true;
 
     console.log('Running comprehensive song cleanup');
-
-    // Cancel any pending fetch requests
-    if (songLoadAbortControllerRef.current) {
-      try {
-        songLoadAbortControllerRef.current.abort();
-      } catch (error) {
-        console.error('Error aborting fetch:', error);
-      }
-    }
     
     // Clear any bed music timeout
     if (musicBedTimeoutRef.current) {
@@ -408,78 +412,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
     }
   };
 
-  // Fetch lyrics from backend
-  const fetchLyrics = useCallback((trackId) => {
-    const wordsToGuess = song?.expected_words;
-    
-    setLyricsState(prev => ({ 
-      ...prev,
-      lyricsLoading: true, 
-      lyricsError: null 
-    }));
-    
-    // Create a new AbortController for this fetch request
-    if (songLoadAbortControllerRef.current) {
-      songLoadAbortControllerRef.current.abort();
-    }
-    songLoadAbortControllerRef.current = new AbortController();
-    const signal = songLoadAbortControllerRef.current.signal;
-    
-    fetch(`http://localhost:4001/api/getLyrics/${trackId}/${wordsToGuess}`, { signal })
-      .then(response => {
-        if (signal.aborted) throw new Error('Request was aborted');
-        if (!response.ok) throw new Error(`Failed to fetch lyrics: ${response.status}`);
-        return response.json();
-      })
-      .then(data => {
-        if (signal.aborted) throw new Error('Request was aborted');
-        
-        setLyricsState(prev => ({ 
-          ...prev,
-          lyricsToGuess: data.lyricsToGuess || [], 
-          lyrics: data.lyrics || [], 
-          lyricsReady: true,
-          lyricsLoading: false 
-        }));
-        
-        // Check if words_to_guess was returned and different from what we expected
-        if (data.words_to_guess !== undefined && song?.id) {
-          // Get the word count from the API
-          const actualWordsToGuess = data.words_to_guess;
-          
-          // Emit to controllers if it's different from what was requested
-          if (actualWordsToGuess !== wordsToGuess) {
-            console.log(`Emitting updated word count: ${actualWordsToGuess}`);
-            emitEvent('lyrics-words-count', {
-              songId: song.id,
-              count: actualWordsToGuess
-            });
-          }
-        }
-      })
-      .catch(error => {
-        // Don't update state if request was intentionally aborted
-        if (error.name === 'AbortError') {
-          console.log('Fetch request was aborted');
-          return;
-        }
-        
-        console.error('Error fetching lyrics:', error);
-        setLyricsState(prev => ({ 
-          ...prev,
-          lyricsError: `Failed to load lyrics: ${error.message}`,
-          lyricsReady: false,
-          lyricsLoading: false 
-        }));
-      })
-      .finally(() => {
-        // Clean up the controller reference if it's still the current one
-        if (songLoadAbortControllerRef.current && songLoadAbortControllerRef.current.signal === signal) {
-          songLoadAbortControllerRef.current = null;
-        }
-      });
-  }, [song]);
-
   // Start playing the song
   const startPlaying = () => {
     if (!playerState.audioReady || !lyricsState.lyricsReady) {
@@ -538,14 +470,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics }) => {
       }, 1500); // Increased delay to ensure player has time to continue
     }
   };
-
-  // Effect to load lyrics when track id changes
-  useEffect(() => {
-    if (pendingTrackId) {
-      console.log(`Loading lyrics for track: ${pendingTrackId}`);
-      fetchLyrics(pendingTrackId);
-    }
-  }, [pendingTrackId, fetchLyrics]);
 
   // Format time for display (utility function)
   const formatTime = (ms) => {

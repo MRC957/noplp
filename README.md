@@ -31,5 +31,5 @@ TODO:
 - Populate song database (via Groq or Google)
 
 - Régie capable de changer les mots à deviner (possibilité de regénérer)
-- pq Fref rrançois a 0.5sec de décalage avec les lyrics
-- Lyrics à afficher en + grand
+- pq Fred rrançois a 0.5sec de décalage avec les lyrics
+- Ajouter page pour mangt DB (lier catégories, ajouter new song by name or track_id)

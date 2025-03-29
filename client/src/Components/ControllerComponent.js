@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { getSocket } from "../hooks/socketManager";
+import { getSocket, emitEvent, controllerSocket } from "../hooks/socketManager";
 import './ControllerComponent.css';
 
 // Add edit icon as SVG component for better styling and control
@@ -12,7 +12,6 @@ const EditIcon = () => (
 const ControllerComponent = () => {
     const [state, setState] = useState({
         playlist: {},
-        ffaMode: false,
         perfMode: false,
         pickedSongs: [],
         pickedCategories: [],
@@ -28,7 +27,14 @@ const ControllerComponent = () => {
         changingCategoryId: null,
         changingSongId: null,
         availableCategories: [],
-        availableSongs: []
+        availableSongs: [],
+        // New state variables for lyrics selection
+        currentSongId: null,
+        allLyrics: [],
+        lyricsToGuess: [],
+        selectedLyricIndex: -1,
+        showLyricsSelector: false,
+        lyricsLoading: false
     });
 
     const proposedLyricsRef = useRef(null);
@@ -128,7 +134,6 @@ const ControllerComponent = () => {
         console.log('Reseting');
         setState(prevState => ({
             ...prevState,
-            ffaMode: false,
             pickedSongs: [],
             pickedCategories: [],
             trackId: '',
@@ -136,27 +141,8 @@ const ControllerComponent = () => {
         }));
     };
 
-    const handlePerfModeToggle = () => {
-        setState(prevState => {
-            const newPerfMode = !prevState.perfMode;
-            socket.current.emit('set-perf-mode', newPerfMode);
-            return {
-                ...prevState,
-                perfMode: newPerfMode
-            };
-        });
-    };
-
-    const handleFfaToggle = () => {
-        setState(prevState => ({
-            ...prevState,
-            ffaMode: !prevState.ffaMode
-        }));
-        console.log('handle ffa mode', !state.ffaMode);
-    };
-
     const handleToIntro = () => {
-        socket.current.emit('show-intro');
+        controllerSocket.showIntro();
     };
 
     const handleToCategories = () => {
@@ -167,7 +153,7 @@ const ControllerComponent = () => {
             };
         }).sort() || [];
         console.log(categories);
-        socket.current.emit('show-categories', categories);
+        controllerSocket.showCategories(categories);
     };
 
     const handleToSongList = (categoryId) => {
@@ -193,7 +179,7 @@ const ControllerComponent = () => {
         const categoryName = categoryId === undefined ? 'Toutes' : 
             state.playlist.categories?.find(c => c.id === categoryId)?.name || '';
         
-        socket.current.emit('show-song-list', {
+        controllerSocket.showSongList({
             name: categoryName,
             songs: songs
         });
@@ -210,17 +196,12 @@ const ControllerComponent = () => {
         
         console.log('goto song', song);
         
-        // if (state.ffaMode) {
-        //     song.guess_line = 9000;
-        //     song.guess_timecode = '99:00.00';
-        // }
-        
         // Add track_id to the song object if it's available
         if (state.trackId) {
             song.track_id = state.trackId;
         }
         
-        socket.current.emit('goto-song', song);
+        controllerSocket.gotoSong(song);
         
         // Set initial expected words from the song data
         // The actual value may be updated later by the server
@@ -228,48 +209,50 @@ const ControllerComponent = () => {
             ...prevState,
             expectedWords: song.expected_words || 0
         }));
+
+        // Fetch lyrics for the song and send them to the TerminalComponent
+        if (song.track_id) {
+            fetchAndSendLyrics(song);
+        }
     };
 
-    // New function to handle direct track submission
-    const handleSubmitTrack = () => {
-        if (!state.trackId.trim()) return;
+    // New function to fetch and send lyrics to the TerminalComponent
+    const fetchAndSendLyrics = (song) => {
+        const trackId = song.track_id;
+        const wordCount = song.expected_words || 0;
+        const specificLyricTime = song.selected_lyric_time;
         
-        // Create a minimal song object
-        const song =  {
-            id: state.trackId,
-            track_id: state.trackId,
-            title: 'Unknown',
-            artist: 'Unknown',
-            expectedWords: 8
-        };
+        if (!trackId) return;
         
-        // if (state.ffaMode) {
-        //     song.guess_line = 9000;
-        //     song.guess_timecode = '99:00.00';
-        // }
+        // Inform the TerminalComponent that lyrics are loading
+        controllerSocket.sendLyricsLoading();
         
-        console.log('submitting spotify track directly', song);
-        socket.current.emit('goto-song', song);
-
-        // Set initial expected words from the song data
-        // The actual value may be updated later by the server
-        setState(prevState => ({
-            ...prevState,
-            expectedWords: song.expected_words || 0
-        }));        
-    };
-
-    const handleTrackIdChange = (evt) => {
-        setState(prevState => ({
-            ...prevState,
-            trackId: evt.target.value
-        }));
+        // Construct the URL with optional lyric_time parameter
+        let url = `http://localhost:4001/api/getLyrics/${trackId}/${wordCount}`;
+        if (specificLyricTime) {
+            url += `?lyric_time=${specificLyricTime}`;
+        }
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch lyrics: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Fetched lyrics for terminal:', data);
+                // Send the lyrics data through the controllerSocket API
+                controllerSocket.sendLyricsData(data);
+            })
+            .catch(error => {
+                console.error('Error fetching lyrics:', error);
+                controllerSocket.sendLyricsError(error.message);
+            });
     };
 
     const handleProposeLyrics = () => {
         const lyrics = state.proposedLyrics.trim();
         console.log('propose Lyrics', lyrics);
-        socket.current.emit('propose-lyrics', lyrics);
+        controllerSocket.proposeLyrics(lyrics);
     };
     
     const handleInput = (evt) => {
@@ -283,19 +266,19 @@ const ControllerComponent = () => {
         if (proposedLyricsRef.current) {
             proposedLyricsRef.current.value = '';
         }
-        socket.current.emit('freeze-lyrics');
+        controllerSocket.freezeLyrics();
     };
 
     const handleLyricsValidate = () => { 
-        socket.current.emit('validate-lyrics');
+        controllerSocket.validateLyrics();
     };
 
     const handleLyricsReveal = () => {
-        socket.current.emit('reveal-lyrics');
+        controllerSocket.revealLyrics();
     };
 
     const handleLyricsContinue = () => {
-        socket.current.emit('continue-lyrics');
+        controllerSocket.continueLyrics();
     };
 
     // Handle input for new playlist name
@@ -494,6 +477,113 @@ const ControllerComponent = () => {
         });
     };
 
+    // Lyrics management functions
+    const fetchLyricsForSong = (songId, trackId) => {
+        if (!trackId) return;
+        
+        setState(prevState => ({
+            ...prevState,
+            lyricsLoading: true,
+            currentSongId: songId
+        }));
+        
+        // Fetch lyrics from the backend without specifying words to guess
+        // This will return all available lyrics for the track
+        fetch(`http://localhost:4001/api/getLyrics/${trackId}/0`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch lyrics: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                setState(prevState => ({
+                    ...prevState,
+                    allLyrics: data.lyrics || [],
+                    lyricsToGuess: data.lyricsToGuess || [],
+                    lyricsLoading: false,
+                    showLyricsSelector: true
+                }));
+                console.log('Fetched lyrics:', data);
+            })
+            .catch(error => {
+                console.error('Error fetching lyrics:', error);
+                setState(prevState => ({
+                    ...prevState,
+                    lyricsLoading: false
+                }));
+                alert(`Failed to load lyrics: ${error.message}`);
+            });
+    };
+
+    const handleToggleLyricsSelector = (songId) => {
+        const song = songList.find(s => s.id === songId);
+        if (!song) return;
+        
+        // If already showing lyrics for this song, just toggle the visibility
+        if (state.currentSongId === songId) {
+            setState(prevState => ({
+                ...prevState,
+                showLyricsSelector: !prevState.showLyricsSelector
+            }));
+            return;
+        }
+        
+        // Otherwise, fetch lyrics for the song
+        fetchLyricsForSong(songId, song.track_id);
+    };
+
+    const handleSelectLyricToGuess = (index) => {
+        if (index < 0 || index >= state.allLyrics.length) return;
+        
+        const selectedLyric = state.allLyrics[index];
+        if (!selectedLyric) return;
+        
+        // Count words in this lyric
+        const wordCount = selectedLyric.word_count;
+        
+        // Update the song in the playlist with the new expected_words count
+        const updatedPlaylist = {
+            ...state.playlist,
+            songs: state.playlist.songs.map(s => 
+                s.id === state.currentSongId ? 
+                { 
+                    ...s, 
+                    expected_words: wordCount,
+                    selected_lyric_index: index,
+                    selected_lyric_time: selectedLyric.startTimeMs
+                } : s
+            )
+        };
+        
+        // Update state
+        setState(prevState => ({
+            ...prevState,
+            playlist: updatedPlaylist,
+            selectedLyricIndex: index,
+            expectedWords: wordCount
+        }));
+        
+        console.log(`Selected lyric at index ${index} with ${wordCount} words:`, selectedLyric);
+        
+        // Notify the server of the updated word count
+        if (state.currentSongId) {
+            // Emit word count update
+            emitEvent('lyrics-words-count', {
+                songId: state.currentSongId,
+                count: wordCount
+            });
+            
+            // Also emit the new event with the selected lyric data
+            // This will immediately update the lyrics to guess in the TerminalComponent
+            emitEvent('update-lyrics-to-guess', {
+                songId: state.currentSongId,
+                lyricsToGuess: [selectedLyric],
+                wordCount: wordCount
+            });
+        }
+    };
+
     // Render logic
     const songList = state.playlist.songs || [];
     const categories = (state.playlist.categories || []).map(c => {
@@ -566,6 +656,14 @@ const ControllerComponent = () => {
                         title="Edit song"
                     >
                         <EditIcon />
+                    </button>
+                    <button
+                        className="lyrics-selector-button"
+                        onClick={() => handleToggleLyricsSelector(song.id)}
+                        aria-label="Select lyrics"
+                        title="Select lyrics to guess"
+                    >
+                        Lyrics
                     </button>
                 </div>
             );
@@ -647,29 +745,6 @@ const ControllerComponent = () => {
                 </div>
             )}
             
-            {/* <div className="track-id-form">
-                <div className="form-group">
-                    <label htmlFor="trackId">Spotify Track ID:</label>
-                    <input 
-                        id="trackId"
-                        type="text" 
-                        placeholder="Enter Spotify Track ID" 
-                        value={state.trackId}
-                        onChange={handleTrackIdChange}
-                        className="track-id-input"
-                    />
-                    <button 
-                        onClick={handleSubmitTrack} 
-                        disabled={!state.trackId.trim()} 
-                        className="track-id-submit"
-                    >
-                        Play Track
-                    </button>
-                </div>
-                <div className="helper-text">
-                    Enter a Spotify Track ID and click "Play Track" to play it directly
-                </div>
-            </div> */}
             
             <div className="lyrics-form">
                 <input  
@@ -685,6 +760,71 @@ const ControllerComponent = () => {
                     <button onClick={handleLyricsContinue}>Continue</button>
                 </div>
             </div>
+            
+            {/* Lyrics Selector Panel */}
+            {state.showLyricsSelector && state.currentSongId && (
+                <div className="lyrics-selector-panel">
+                    <div className="lyrics-selector-header">
+                        <h3>
+                            Select Lyrics to Guess
+                            {state.lyricsLoading && <span className="loading-indicator"> Loading...</span>}
+                        </h3>
+                        <button 
+                            onClick={() => setState(prev => ({ ...prev, showLyricsSelector: false }))}
+                            className="close-button"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    
+                    {state.lyricsLoading ? (
+                        <div className="lyrics-loading">Loading lyrics...</div>
+                    ) : state.allLyrics.length === 0 ? (
+                        <div className="lyrics-empty">No lyrics available for this song</div>
+                    ) : (
+                        <div className="lyrics-list">
+                            {state.allLyrics.map((lyric, index) => {
+                                // Format the time for display
+                                const timeInSeconds = Math.floor(lyric.startTimeMs / 1000);
+                                const minutes = Math.floor(timeInSeconds / 60);
+                                const seconds = timeInSeconds % 60;
+                                const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                                
+                                // Count words in this lyric
+                                const wordCount = lyric.word_count;
+                                
+                                // Check if this is the currently selected lyric
+                                const isSelected = index === state.selectedLyricIndex;
+                                
+                                // Check if this lyric is in the lyricsToGuess array
+                                const isGuessable = state.lyricsToGuess.some(g => g.startTimeMs === lyric.startTimeMs);
+                                
+                                return (
+                                    <div 
+                                        key={`lyric-${index}`}
+                                        className={`lyric-item ${isSelected ? 'selected' : ''} ${isGuessable ? 'guessable' : ''}`}
+                                        onClick={() => handleSelectLyricToGuess(index)}
+                                    >
+                                        <div className="lyric-time">{formattedTime}</div>
+                                        <div className="lyric-content">{lyric.words}</div>
+                                        <div className="lyric-word-count">({wordCount} words)</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    
+                    <div className="lyrics-selector-footer">
+                        <button 
+                            onClick={() => setState(prev => ({ ...prev, showLyricsSelector: false }))}
+                            className="finish-button"
+                        >
+                            Done
+                        </button>
+                    </div>
+                </div>
+            )}
+            
             {categoriesElements}
         </div>
     );

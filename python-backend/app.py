@@ -196,20 +196,47 @@ def get_lyrics(track_id, words_to_guess=5):
         except ValueError:
             words_to_guess = DEFAULT_WORDS_TO_GUESS
             
+        # Get optional parameter for specific lyric start time
+        specific_lyric_time = request.args.get('lyric_time')
+        if specific_lyric_time:
+            try:
+                specific_lyric_time = int(specific_lyric_time)
+            except ValueError:
+                specific_lyric_time = None
+            
         list_lyrics = {}
         
         # Try to get lyrics from database first
         with app.app_context():
             song = Song.query.get(track_id)
             
-            if song and song.lyrics:
-                # Convert to DataFrame for compatibility with the rest of the code
-                df_lyrics = pd.DataFrame(song.lyrics, columns=['startTimeMs', 'words'])
+            if not song:
+                raise ValueError(f"Song with ID {track_id} not found")
+            
+            if not song.lyrics:
+                raise ValueError(f"No lyrics found for song with ID {track_id}")
+
+            # Convert to DataFrame for compatibility with the rest of the code
+            df_lyrics = pd.DataFrame(song.lyrics, columns=['startTimeMs', 'words'])
+            
+            if not df_lyrics.empty:
+                df_lyrics['word_count'] = count_words(df_lyrics['words'])
+                list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
+                # list_lyrics["lyrics"] = song.lyrics
                 
-                if not df_lyrics.empty:
-                    list_lyrics["lyrics"] = song.lyrics
-                    
-                    # Use safer version with recursion depth limit
+                # If lyrics_time is provided, use that specific lyric
+                if specific_lyric_time is not None:
+                    list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_specific_lyric(
+                        df_lyrics, 
+                        specific_lyric_time
+                    )
+                    list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+                # If words_to_guess is 0, don't select any lyrics (used for lyrics browser)
+                elif words_to_guess == 0:
+                    list_lyrics["lyricsToGuess"] = []
+                    list_lyrics["words_to_guess"] = 0
+                # Otherwise use safer version with recursion depth limit
+                else:
                     try:
                         list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(
                             df_lyrics, 
@@ -222,35 +249,74 @@ def get_lyrics(track_id, words_to_guess=5):
                         # Fallback to first line if extraction fails
                         list_lyrics["lyricsToGuess"] = df_lyrics.iloc[:1].to_dict(orient='records')
                         list_lyrics["words_to_guess"] = 1
-                    
-                    return jsonify(list_lyrics)
+                
+                return jsonify(list_lyrics)
         
-        # Fall back to fetching from Spotify API if not in database
-        df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
+        # # Fall back to fetching from Spotify API if not in database
+        # df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
         
-        if df_lyrics is None or df_lyrics.empty:
-            return jsonify({"error": "No lyrics found for this track"}), 404
+        # if df_lyrics is None or df_lyrics.empty:
+        #     return jsonify({"error": "No lyrics found for this track"}), 404
             
-        list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
+        # list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
         
-        # Use safer version with recursion depth limit
-        try:
-            list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(
-                df_lyrics, 
-                words_to_guess=int(words_to_guess),
-                recursion_depth=0
-            )
-            list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
-        except Exception as e:
-            logger.error(f"Error extracting lyrics to guess: {str(e)}")
-            # Fallback to first line if extraction fails
-            list_lyrics["lyricsToGuess"] = df_lyrics.iloc[:1].to_dict(orient='records')
-            list_lyrics["words_to_guess"] = 1
+        # # If lyrics_time is provided, use that specific lyric
+        # if specific_lyric_time is not None:
+        #     list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_specific_lyric(
+        #         df_lyrics, 
+        #         specific_lyric_time
+        #     )
+        #     list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+        # # If words_to_guess is 0, don't select any lyrics (used for lyrics browser)
+        # elif words_to_guess == 0:
+        #     list_lyrics["lyricsToGuess"] = []
+        #     list_lyrics["words_to_guess"] = 0
             
-        return jsonify(list_lyrics)
+        # # Otherwise use safer version with recursion depth limit
+        # else:
+        #     try:
+        #         list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(
+        #             df_lyrics, 
+        #             words_to_guess=int(words_to_guess),
+        #             recursion_depth=0
+        #         )
+        #         list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+        #     except Exception as e:
+        #         logger.error(f"Error extracting lyrics to guess: {str(e)}")
+        #         # Fallback to first line if extraction fails
+        #         list_lyrics["lyricsToGuess"] = df_lyrics.iloc[:1].to_dict(orient='records')
+        #         list_lyrics["words_to_guess"] = 1
+            
+        # return jsonify(list_lyrics)
     except Exception as e:
         logger.exception(f"Error getting lyrics for {track_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+def count_words(s_words):
+    """Count the number of words in each line separated by a space " " or a " ' " """
+    return s_words.apply(lambda x: len(x.replace("'", " ").replace("-", " ").split()))
+
+
+def extract_specific_lyric(df, lyric_time):
+    """Extract a specific lyric line by its start time"""
+    # Find the nearest lyric to the given time
+    df_filtered = df[df['startTimeMs'] == lyric_time]
+    
+    # If no exact match, find the closest one
+    if df_filtered.empty:
+        # Find the closest timestamp by absolute difference
+        closest_idx = (df['startTimeMs'] - lyric_time).abs().idxmin()
+        df_filtered = df.iloc[[closest_idx]]
+    
+    # Count the words in the selected lyric
+    if 'word_count' not in df_filtered.columns:
+        df_filtered['word_count'] = count_words(df_filtered['words'])
+        
+    # Get the actual word count
+    words_to_guess = int(df_filtered['word_count'].iloc[0])
+    
+    return df_filtered, words_to_guess
+
 
 def extract_lyric_to_guess(df, words_to_guess=5, recursion_depth=0):
     """Extract the lyrics to guess from the lyrics dataframe with recursion depth limit"""
@@ -261,7 +327,7 @@ def extract_lyric_to_guess(df, words_to_guess=5, recursion_depth=0):
         return df.iloc[:1], 1
         
     # Count the number of words in each line separated by a space " " or a " ' "
-    df['word_count'] = df['words'].apply(lambda x: len(x.replace("'", " ").split()))
+    df['word_count'] = count_words(df['words'])
 
     # Choose a random row where word_count is greater than 'nb_missing_lyrics after the 10 first lyrics
     min_song_duration = 20000 # Guess after min 20 seconds
@@ -434,6 +500,189 @@ def save_playlist():
         logger.exception(f"Error saving playlist: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# Add new route for improved lyrics management
+@app.route('/api/lyrics-management', methods=['POST'])
+def manage_lyrics():
+    """
+    Enhanced endpoint for centralized lyrics management.
+    This supports various operations including:
+    - Fetching lyrics for a song
+    - Selecting specific lyrics to guess
+    - Updating lyrics data for a song
+    """
+    try:
+        data = request.json
+        operation = data.get('operation')
+        
+        if operation == 'fetch':
+            # Similar to getLyrics but with more flexibility
+            track_id = data.get('track_id')
+            words_to_guess = data.get('words_to_guess', 5)
+            specific_lyric_time = data.get('specific_lyric_time')
+            
+            if not track_id:
+                return jsonify({"error": "track_id is required"}), 400
+                
+            return get_lyrics_internal(track_id, words_to_guess, specific_lyric_time)
+            
+        elif operation == 'select':
+            # Select a specific lyric for guessing
+            track_id = data.get('track_id')
+            lyric_time = data.get('lyric_time')
+            song_id = data.get('song_id')
+            
+            if not track_id or not lyric_time:
+                return jsonify({"error": "track_id and lyric_time are required"}), 400
+                
+            # Get the lyrics for this track
+            lyrics_data = get_lyrics_internal(track_id, 0)
+            if 'error' in lyrics_data:
+                return jsonify(lyrics_data), 404
+                
+            # Find the specific lyric
+            all_lyrics = lyrics_data.get('lyrics', [])
+            selected_lyric = None
+            
+            for lyric in all_lyrics:
+                if lyric['startTimeMs'] == lyric_time:
+                    selected_lyric = lyric
+                    break
+                    
+            if not selected_lyric:
+                return jsonify({"error": f"No lyric found at time {lyric_time}"}), 404
+                
+            # Count words in this lyric
+            word_count = len(selected_lyric['words'].replace("'", " ").split())
+            
+            return jsonify({
+                "selected_lyric": selected_lyric,
+                "word_count": word_count,
+                "song_id": song_id,
+                "track_id": track_id
+            })
+            
+        elif operation == 'update':
+            # Update lyrics for a song (e.g., save selected lyric to guess)
+            song_id = data.get('song_id')
+            track_id = data.get('track_id')
+            lyric_time = data.get('lyric_time')
+            word_count = data.get('word_count')
+            
+            if not song_id or not track_id or not lyric_time:
+                return jsonify({"error": "song_id, track_id, and lyric_time are required"}), 400
+                
+            # In a real implementation, we would update the database here
+            # For now, just return success
+            return jsonify({
+                "message": "Lyrics updated successfully",
+                "song_id": song_id,
+                "track_id": track_id,
+                "lyric_time": lyric_time,
+                "word_count": word_count
+            })
+            
+        else:
+            return jsonify({"error": f"Unknown operation: {operation}"}), 400
+            
+    except Exception as e:
+        logger.exception(f"Error managing lyrics: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+def get_lyrics_internal(track_id, words_to_guess=5, specific_lyric_time=None):
+    """Internal function to get lyrics, used by both the GET endpoint and the POST endpoint"""
+    try:
+        try: 
+            words_to_guess = int(words_to_guess)
+        except ValueError:
+            words_to_guess = DEFAULT_WORDS_TO_GUESS
+            
+        # Convert specific_lyric_time to int if provided
+        if specific_lyric_time:
+            try:
+                specific_lyric_time = int(specific_lyric_time)
+            except ValueError:
+                specific_lyric_time = None
+            
+        list_lyrics = {}
+        
+        # Try to get lyrics from database first
+        with app.app_context():
+            song = Song.query.get(track_id)
+            
+            if song and song.lyrics:
+                # Convert to DataFrame for compatibility with the rest of the code
+                df_lyrics = pd.DataFrame(song.lyrics, columns=['startTimeMs', 'words'])
+                
+                if not df_lyrics.empty:
+                    list_lyrics["lyrics"] = song.lyrics
+                    
+                    # If lyrics_time is provided, use that specific lyric
+                    if specific_lyric_time is not None:
+                        list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_specific_lyric(
+                            df_lyrics, 
+                            specific_lyric_time
+                        )
+                        list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+                    # If words_to_guess is 0, don't select any lyrics (used for lyrics browser)
+                    elif words_to_guess == 0:
+                        list_lyrics["lyricsToGuess"] = []
+                        list_lyrics["words_to_guess"] = 0
+                    # Otherwise use safer version with recursion depth limit
+                    else:
+                        try:
+                            list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(
+                                df_lyrics, 
+                                words_to_guess=int(words_to_guess),
+                                recursion_depth=0
+                            )
+                            list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+                        except Exception as e:
+                            logger.error(f"Error extracting lyrics to guess: {str(e)}")
+                            # Fallback to first line if extraction fails
+                            list_lyrics["lyricsToGuess"] = df_lyrics.iloc[:1].to_dict(orient='records')
+                            list_lyrics["words_to_guess"] = 1
+                    
+                    return list_lyrics
+        
+        # Fall back to fetching from Spotify API if not in database
+        df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
+        
+        if df_lyrics is None or df_lyrics.empty:
+            return {"error": "No lyrics found for this track"}
+            
+        list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
+        
+        # If lyrics_time is provided, use that specific lyric
+        if specific_lyric_time is not None:
+            list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_specific_lyric(
+                df_lyrics, 
+                specific_lyric_time
+            )
+            list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+        # If words_to_guess is 0, don't select any lyrics (used for lyrics browser)
+        elif words_to_guess == 0:
+            list_lyrics["lyricsToGuess"] = []
+            list_lyrics["words_to_guess"] = 0
+        # Otherwise use safer version with recursion depth limit
+        else:
+            try:
+                list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(
+                    df_lyrics, 
+                    words_to_guess=int(words_to_guess),
+                    recursion_depth=0
+                )
+                list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
+            except Exception as e:
+                logger.error(f"Error extracting lyrics to guess: {str(e)}")
+                # Fallback to first line if extraction fails
+                list_lyrics["lyricsToGuess"] = df_lyrics.iloc[:1].to_dict(orient='records')
+                list_lyrics["words_to_guess"] = 1
+            
+        return list_lyrics
+    except Exception as e:
+        logger.exception(f"Error getting lyrics for {track_id}: {str(e)}")
+        return {"error": str(e)}
+
 # Socket.IO error handling decorator
 def handle_socket_errors(f):
     def wrapped(*args, **kwargs):
@@ -519,10 +768,31 @@ def handle_lyrics_validation_result(data):
 def handle_lyrics_words_count(data):
     emit('lyrics-words-count', data, room='karaoke', include_self=False)
 
+@socketio.on('update-lyrics-to-guess')
+@handle_socket_errors
+def handle_update_lyrics_to_guess(data):
+    # Forward the updated lyrics data to all clients in the room
+    emit('lyrics-to-guess-updated', data, room='karaoke', skip_sid=request.sid)
+
 @socketio.on('set-perf-mode')
 @handle_socket_errors
 def handle_set_perf_mode(args):
     emit('set-perf-mode', args, room='karaoke', skip_sid=request.sid)
+
+@socketio.on('lyrics-data')
+@handle_socket_errors
+def handle_lyrics_data(data):
+    emit('lyrics-data', data, room='karaoke', skip_sid=request.sid)
+
+@socketio.on('lyrics-loading')
+@handle_socket_errors
+def handle_lyrics_loading():
+    emit('lyrics-loading', room='karaoke', skip_sid=request.sid)
+
+@socketio.on('lyrics-error')
+@handle_socket_errors
+def handle_lyrics_error(error):
+    emit('lyrics-error', error, room='karaoke', skip_sid=request.sid)
 
 @app.route('/api/spotify/auth', methods=['GET'])
 def get_spotify_auth():

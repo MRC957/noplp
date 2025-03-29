@@ -370,3 +370,153 @@ button {
     background-color: #ccc;
     cursor: not-allowed;
 }
+
+/* New styles for lyrics selector panel */
+.lyrics-selector-panel {
+    margin: 1em 0.5em;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.lyrics-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.lyrics-selector-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.loading-indicator {
+    font-style: italic;
+    color: #6c757d;
+    font-weight: normal;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.close-button {
+    background-color: transparent;
+    border: none;
+    font-size: 20px;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6c757d;
+}
+
+.close-button:hover {
+    color: #212529;
+}
+
+.lyrics-list {
+    overflow-y: auto;
+    max-height: 380px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.lyric-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.lyric-item:hover {
+    background-color: #f1f1f1;
+}
+
+.lyric-item.selected {
+    background-color: #e7f3ff;
+    border-left: 4px solid #007bff;
+}
+
+.lyric-item.guessable {
+    border-left: 4px solid #ffc107;
+}
+
+.lyric-item.selected.guessable {
+    border-left: 4px solid #28a745;
+}
+
+.lyric-time {
+    flex: 0 0 50px;
+    color: #6c757d;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.lyric-content {
+    flex: 1;
+}
+
+.lyric-word-count {
+    flex: 0 0 80px;
+    text-align: right;
+    color: #6c757d;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.lyrics-selector-footer {
+    margin-top: 15px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.finish-button {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.finish-button:hover {
+    background-color: #0069d9;
+}
+
+.lyrics-loading, 
+.lyrics-empty {
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+    color: #6c757d;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Add button to open lyrics selector */
+.lyrics-selector-button {
+    background-color: #17a2b8;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    margin-left: 5px;
+    font-size: 12px;
+}
+
+.lyrics-selector-button:hover {
+    background-color: #138496;
+}

@@ -52,6 +52,14 @@ const TerminalComponent = () => {
     state: STATE_LYRICS_NONE,
   });
 
+  // Store lyrics data that will be passed to the Song component
+  const [lyricsData, setLyricsData] = useState({
+    lyrics: [],
+    lyricsToGuess: [],
+    lyricsLoading: false,
+    lyricsError: null
+  });
+
   // Store previous song id to detect song changes
   const previousSongIdRef = useRef(null);
 
@@ -74,6 +82,12 @@ const TerminalComponent = () => {
         setSuggestedLyrics({
           content: '',
           state: STATE_LYRICS_NONE,
+        });
+        setLyricsData({
+          lyrics: [],
+          lyricsToGuess: [],
+          lyricsLoading: false,
+          lyricsError: null
         });
         previousSongIdRef.current = payload.id;
       }
@@ -174,6 +188,40 @@ const TerminalComponent = () => {
       setUiState(prev => ({ ...prev, perfMode: data }));
     });
 
+    // New socket listeners for lyrics data
+    socket.on('lyrics-data', (data) => {
+      setLyricsData({
+        lyrics: data.lyrics || [],
+        lyricsToGuess: data.lyricsToGuess || [],
+        lyricsLoading: false,
+        lyricsError: null
+      });
+    });
+
+    socket.on('lyrics-loading', () => {
+      setLyricsData(prev => ({
+        ...prev,
+        lyricsLoading: true
+      }));
+    });
+
+    socket.on('lyrics-error', (error) => {
+      setLyricsData(prev => ({
+        ...prev,
+        lyricsLoading: false,
+        lyricsError: error
+      }));
+    });
+
+    // New socket listener for lyrics-to-guess-updated event
+    socket.on('lyrics-to-guess-updated', (data) => {
+      console.log('Received updated lyrics to guess:', data);
+      setLyricsData(prev => ({
+        ...prev,
+        lyricsToGuess: data.lyricsToGuess || [],
+      }));
+    });
+
     return () => {
       socket.removeAllListeners();
     };
@@ -216,6 +264,10 @@ const TerminalComponent = () => {
             song={uiState.payload}
             suggestedLyrics={suggestedLyrics}
             jukebox={playSound}
+            lyrics={lyricsData.lyrics}
+            lyricsToGuess={lyricsData.lyricsToGuess}
+            lyricsLoading={lyricsData.lyricsLoading}
+            lyricsError={lyricsData.lyricsError}
           />
         );
       case STATES.CATEGORIES:

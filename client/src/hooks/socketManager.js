@@ -51,6 +51,11 @@ export const controllerSocket = {
   revealLyrics: () => emitEvent('reveal-lyrics'),
   continueLyrics: () => emitEvent('continue-lyrics'),
   
+  // Lyrics data transfer
+  sendLyricsData: (data) => emitEvent('lyrics-data', data),
+  sendLyricsLoading: () => emitEvent('lyrics-loading'),
+  sendLyricsError: (error) => emitEvent('lyrics-error', error),
+  
   // Mode settings
   setPerfMode: (mode) => emitEvent('set-perf-mode', mode),
   
