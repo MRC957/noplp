@@ -547,7 +547,7 @@ const ControllerComponent = () => {
             });
             
             // Also emit the new event with the selected lyric data
-            // This will immediately update the lyrics to guess in the TerminalComponent
+            // This will update the lyrics to guess without reloading the whole song
             emitEvent('update-lyrics-to-guess', {
                 songId: state.currentSongId,
                 lyricsToGuess: [selectedLyric],

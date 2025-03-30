@@ -16,7 +16,9 @@ const SpotifyPlayer = forwardRef(({
   const spotifyControllerRef = useRef(null);
   const playerContainerRef = useRef(null);
   const pendingTrackIdRef = useRef(null);
-  const currentTrackIdRef = useRef(null); // Add reference to track current track ID
+  const currentTrackIdRef = useRef(null);
+  const apiLoadingRef = useRef(false);
+  const playerReinitiateTimeoutRef = useRef(null);
 
   // Load Spotify iframe API on mount
   useEffect(() => {
@@ -24,6 +26,11 @@ const SpotifyPlayer = forwardRef(({
     loadSpotifyIframeApi();
     
     return () => {
+      // Clear any pending timeouts
+      if (playerReinitiateTimeoutRef.current) {
+        clearTimeout(playerReinitiateTimeoutRef.current);
+        playerReinitiateTimeoutRef.current = null;
+      }
       cleanupPlayer();
     };
   }, []);
@@ -43,28 +50,41 @@ const SpotifyPlayer = forwardRef(({
         console.log(`Switching to new track: ${trackId}`);
         // Update current track ref
         currentTrackIdRef.current = trackId;
+        
+        // Clean up existing player when changing tracks
+        if (spotifyControllerRef.current) {
+          cleanupPlayer();
+        }
       }
+    } else {
+      // No trackId provided, but keep the reference to the last one
+      console.log('Track ID is null, maintaining current references');
     }
     
     // Only create a new player when the API is loaded and we have a track ID
     if (isApiLoaded && pendingTrackIdRef.current) {
-      // Always clean up existing player before creating a new one
-      cleanupPlayer();
+      // Give a small delay to ensure DOM is ready, especially after visibility changes
+      if (playerReinitiateTimeoutRef.current) {
+        clearTimeout(playerReinitiateTimeoutRef.current);
+      }
       
-      // Create a new player with the pending track
-      createPlayerAndLoad(pendingTrackIdRef.current);
+      playerReinitiateTimeoutRef.current = setTimeout(() => {
+        // Create a new player with the pending track
+        createPlayerAndLoad(pendingTrackIdRef.current);
+        playerReinitiateTimeoutRef.current = null;
+      }, 100);
     }
   }, [trackId, isApiLoaded]);
 
   // Load the Spotify iframe API
   const loadSpotifyIframeApi = () => {
-    // Check if API is already being loaded or is loaded
-    if (window.onSpotifyIframeApiReady) {
+    // Avoid repeated loading
+    if (spotifyApiRef.current || apiLoadingRef.current || window.onSpotifyIframeApiReady) {
       console.log('Spotify API loading handler already exists');
-      // If the handler already exists but API isn't marked as loaded yet,
-      // we might be in a partial initialization state
       return;
     }
+    
+    apiLoadingRef.current = true;
     
     // Set up handler for when Spotify iframe API is ready
     window.onSpotifyIframeApiReady = (IFrameAPI) => {
@@ -75,13 +95,17 @@ const SpotifyPlayer = forwardRef(({
       onPlayerReady(true);
       // Update local state to indicate API is loaded
       setIsApiLoaded(true);
+      apiLoadingRef.current = false;
     };
     
-    // Create and inject the Spotify script
-    const script = document.createElement('script');
-    script.src = 'https://open.spotify.com/embed/iframe-api/v1';
-    script.async = true;
-    document.body.appendChild(script);
+    // Create and inject the Spotify script if it doesn't exist
+    if (!document.getElementById('spotify-iframe-api')) {
+      const script = document.createElement('script');
+      script.id = 'spotify-iframe-api';
+      script.src = 'https://open.spotify.com/embed/iframe-api/v1';
+      script.async = true;
+      document.body.appendChild(script);
+    }
   };
 
   // Create player container and load track
@@ -133,6 +157,15 @@ const SpotifyPlayer = forwardRef(({
         controller.addListener('error', (error) => {
           console.error('Spotify player error:', error);
           onError(`Error: ${error.message || 'Failed to load track'}`);
+          
+          // Try to recreate the player after a delay if there's an error
+          setTimeout(() => {
+            if (pendingTrackIdRef.current) {
+              console.log('Attempting to recover from error by recreating player');
+              cleanupPlayer();
+              createPlayerAndLoad(pendingTrackIdRef.current);
+            }
+          }, 2000);
         });
       });
     } catch (error) {
@@ -216,6 +249,9 @@ const SpotifyPlayer = forwardRef(({
     if (playerContainerRef.current) {
       playerContainerRef.current.innerHTML = '';
     }
+    
+    // Don't reset the current track ID reference,
+    // as we want to remember which track was playing
   };
 
   // Expose player methods to parent component
@@ -223,7 +259,15 @@ const SpotifyPlayer = forwardRef(({
     play,
     pause,
     resume,
-    cleanup: cleanupPlayer
+    cleanup: cleanupPlayer,
+    reinitialize: () => {
+      // Force reinitialization of the player with the current track
+      const currentTrack = pendingTrackIdRef.current;
+      if (currentTrack) {
+        cleanupPlayer();
+        createPlayerAndLoad(currentTrack);
+      }
+    }
   }));
 
   return (
@@ -231,6 +275,7 @@ const SpotifyPlayer = forwardRef(({
       ref={playerContainerRef}
       className="player-container-wrapper"
       style={{ display: trackId ? 'block' : 'none' }}
+      data-track-id={trackId || 'none'}
     />
   );
 });

@@ -62,12 +62,18 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
   const preventRepeatedPauseRef = useRef(false); // Prevent immediate re-pause
   const hasInitializedRef = useRef(false); // Track if the current song has been initialized
   const cleanupInProgressRef = useRef(false); // Track if cleanup is in progress
+  const isVisibleRef = useRef(false); // Track if the component is currently visible
   
   // Track the previous lyrics state to detect changes
   const previousLyricStateRef = useRef(STATE_LYRICS_NONE);
   
   // Store the previous song ID to detect changes
   const previousSongIdRef = useRef(null);
+
+  // Check if the component is currently visible (not display:none)
+  const checkVisibility = () => {
+    return window.getComputedStyle(spotifyPlayerRef.current?.parentNode?.parentNode || document.body).display !== 'none';
+  };
   
   // Effect to play sounds when lyric state changes
   useEffect(() => {
@@ -114,19 +120,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
       previousLyricStateRef.current = currentState;
     }
   }, [suggestedLyrics?.state, jukebox, song]);
-
-  // Helper function to update revealed lyrics
-  const updateRevealedLyrics = () => {
-    if (lyricsState.currentLyricIndex >= 0) {
-      const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
-      if (currentLyric && !lyricsState.revealedLyrics.includes(currentLyric.startTimeMs)) {
-        setLyricsState(prev => ({
-          ...prev,
-          revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
-        }));
-      }
-    }
-  };
 
   // Function to check if the suggested lyrics are correct
   const checkIfLyricsAreCorrect = () => {
@@ -186,6 +179,54 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     };
   }, []);
 
+  // Check for component visibility changes
+  useEffect(() => {
+    // Create observer to watch visibility changes
+    const observer = new MutationObserver(() => {
+      const isVisible = checkVisibility();
+      
+      // If visibility changed
+      if (isVisible !== isVisibleRef.current) {
+        console.log(`Song component visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
+        isVisibleRef.current = isVisible;
+        
+        // If becoming visible again and we have a track
+        if (isVisible && pendingTrackId && song?.id) {
+          console.log('Song component visible again, may need to reinitialize player');
+          
+          // Only reinitialize if needed
+          if (spotifyPlayerRef.current && !playerState.audioReady) {
+            console.log('Reinitializing Spotify player after becoming visible');
+            // This will force the SpotifyPlayer to recreate the iframe
+            setPendingTrackId(prev => null);
+            setTimeout(() => setPendingTrackId(song.track_id), 50);
+          }
+        } 
+        // If being hidden, pause audio
+        else if (!isVisible && spotifyPlayerRef.current) {
+          try {
+            spotifyPlayerRef.current.pause();
+          } catch (err) {
+            console.error('Error pausing hidden player:', err);
+          }
+        }
+      }
+    });
+    
+    // Start observing the document body for attribute changes
+    observer.observe(document.body, { 
+      attributes: true, 
+      childList: true, 
+      subtree: true 
+    });
+    
+    // Initial visibility check
+    isVisibleRef.current = checkVisibility();
+    console.log(`Initial Song component visibility: ${isVisibleRef.current ? 'visible' : 'hidden'}`);
+    
+    return () => observer.disconnect();
+  }, [pendingTrackId, song?.id, playerState.audioReady]);
+
   // Handle song or track_id changes
   useEffect(() => {
     // Check if song has changed or if we're initializing with a new song
@@ -222,16 +263,52 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
   useEffect(() => {
     // Only update if we have actual lyrics data
     if (lyrics && lyrics.length > 0) {
-      setLyricsState(prev => ({
-        ...prev,
-        lyrics,
-        lyricsToGuess,
-        lyricsReady: true,
-        lyricsLoading,
-        lyricsError
-      }));
+      const isOnlyLyricsToGuessUpdate = 
+        lyricsState.lyrics.length > 0 && 
+        JSON.stringify(lyrics) === JSON.stringify(lyricsState.lyrics) &&
+        JSON.stringify(lyricsToGuess) !== JSON.stringify(lyricsState.lyricsToGuess);
+
+      console.log('Lyrics update detected:', { 
+        isOnlyLyricsToGuessUpdate,
+        currentPosition: playerState.currentTime
+      });
+      
+      if (isOnlyLyricsToGuessUpdate) {
+        // If only lyricsToGuess changed, preserve the player state
+        setLyricsState(prev => ({
+          ...prev,
+          lyricsToGuess,
+          lyricsLoading,
+          lyricsError
+        }));
+        
+        console.log('Only lyrics to guess changed - preserving playback state');
+      } else {
+        // Full lyrics update - normal flow
+        setLyricsState(prev => ({
+          ...prev,
+          lyrics,
+          lyricsToGuess,
+          lyricsReady: true,
+          lyricsLoading,
+          lyricsError
+        }));
+        
+        // If we're visible, the component is ready, and this is an update with new lyrics for a song
+        // that matches our current song, try to auto-play
+        if (isVisibleRef.current && previousSongIdRef.current === song?.id && playerState.playerReady && playerState.audioReady) {
+          console.log("Lyrics received for current song - checking if we can auto-play");
+          // Set a small timeout to ensure state updates have completed
+          setTimeout(() => {
+            if (!playerStateRef.current.pausedForGuessing) {
+              console.log("Auto-playing after lyrics load");
+              startPlaying();
+            }
+          }, 100);
+        }
+      }
     }
-  }, [lyrics, lyricsToGuess, lyricsLoading, lyricsError]);
+  }, [lyrics, lyricsToGuess, lyricsLoading, lyricsError, song?.id]);
 
   // Start playing when everything is ready
   useEffect(() => {
@@ -240,15 +317,30 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
       audioReady: playerState.audioReady,
       lyricsReady: lyricsState.lyricsReady,
       playerReady: playerState.playerReady,
-      hasSong: !!song
+      hasSong: !!song,
+      isVisible: isVisibleRef.current
     });
 
-    if (song && playerState.audioReady && lyricsState.lyricsReady && playerState.playerReady) {
+    if (song && playerState.audioReady && lyricsState.lyricsReady && 
+        playerState.playerReady && isVisibleRef.current && !hasInitializedRef.current) {
       console.log("All conditions are OK to start playback");
       hasInitializedRef.current = true;
       startPlaying();
     }
   }, [song, playerState.audioReady, lyricsState.lyricsReady, playerState.playerReady]);
+
+  // Add visibility change handler to auto-play when becoming visible with a ready song
+  useEffect(() => {
+    // When visibility changes to visible
+    if (isVisibleRef.current && song?.id && playerState.playerReady && playerState.audioReady && lyricsState.lyricsReady) {
+      console.log("Component became visible with a ready song - checking if we can auto-play");
+      // Avoid interrupting if paused for guessing
+      if (!playerState.pausedForGuessing) {
+        console.log("Auto-playing after becoming visible");
+        startPlaying();
+      }
+    }
+  }, [isVisibleRef.current, playerState.playerReady, playerState.audioReady, lyricsState.lyricsReady]);
 
   // Comprehensive cleanup function
   const cleanupSong = (isComponentUnmount = false) => {
@@ -405,6 +497,10 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
               console.error("Error pausing Spotify player:", error);
             }
             
+            // Prevent repeated pause attempts for this segment
+            preventRepeatedPauseRef.current = true;
+            
+            // We found a lyric to pause for, no need to check further
             break;
           }
         }
@@ -414,7 +510,7 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
 
   // Start playing the song
   const startPlaying = () => {
-    if (!playerState.audioReady || !lyricsState.lyricsReady) {
+    if (!playerState.audioReady || !lyricsState.lyricsReady || !isVisibleRef.current) {
       return;
     }
     
@@ -477,6 +573,19 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Helper function to update revealed lyrics
+  const updateRevealedLyrics = () => {
+    if (lyricsState.currentLyricIndex >= 0) {
+      const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];
+      if (currentLyric && !lyricsState.revealedLyrics.includes(currentLyric.startTimeMs)) {
+        setLyricsState(prev => ({
+          ...prev,
+          revealedLyrics: [...prev.revealedLyrics, currentLyric.startTimeMs]
+        }));
+      }
+    }
   };
 
   // Main render

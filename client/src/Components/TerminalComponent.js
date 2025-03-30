@@ -239,45 +239,67 @@ const TerminalComponent = () => {
     }
   }, [suggestedLyrics]);
 
+  // Keep a song component instance mounted even when displaying other components
+  // This prevents the Spotify iFrame from being destroyed and recreated
   const renderContent = () => {
+    // Always render the Song component regardless of state
+    const songComponent = (
+      <div style={{ display: currentState === STATES.SONG ? 'block' : 'none' }}>
+        <Song 
+          colorFlash={handleFlashColor}
+          song={uiState.payload}
+          suggestedLyrics={suggestedLyrics}
+          jukebox={playSound}
+          lyrics={lyricsData.lyrics}
+          lyricsToGuess={lyricsData.lyricsToGuess}
+          lyricsLoading={lyricsData.lyricsLoading}
+          lyricsError={lyricsData.lyricsError}
+        />
+      </div>
+    );
+    
+    // Render the appropriate component based on current state
     switch (currentState) {
       case STATES.LOADING:
         return (
-          <div className="waiting">
-            <div>Attente de la régie</div>
-            <div className="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
-          </div>
+          <>
+            {songComponent}
+            <div className="waiting">
+              <div>Attente de la régie</div>
+              <div className="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+            </div>
+          </>
         );
       case STATES.INTRO:
-        return <Logo />;
+        return (
+          <>
+            {songComponent}
+            <Logo />
+          </>
+        );
       case STATES.SONGLIST:
         return (
-          <SongList 
-            title={uiState.payload.name} 
-            songs={uiState.payload.songs} 
-          />
+          <>
+            {songComponent}
+            <SongList 
+              title={uiState.payload.name} 
+              songs={uiState.payload.songs} 
+            />
+          </>
         );
       case STATES.SONG:
-        return (
-          <Song 
-            colorFlash={handleFlashColor}
-            song={uiState.payload}
-            suggestedLyrics={suggestedLyrics}
-            jukebox={playSound}
-            lyrics={lyricsData.lyrics}
-            lyricsToGuess={lyricsData.lyricsToGuess}
-            lyricsLoading={lyricsData.lyricsLoading}
-            lyricsError={lyricsData.lyricsError}
-          />
-        );
+        return songComponent;
       case STATES.CATEGORIES:
         return (
-          <Categories 
-            categories={uiState.payload} 
-          />
+          <>
+            {songComponent}
+            <Categories 
+              categories={uiState.payload} 
+            />
+          </>
         );
       default:
-        return null;
+        return songComponent;
     }
   };
 
