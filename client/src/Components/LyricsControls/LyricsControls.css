@@ -1,0 +1,40 @@
+.lyrics-form {
+    display: flex;
+    flex-direction: column;
+    column-gap: 0.3em;
+    margin-bottom: 20px;
+    margin-top: 1em;
+    padding: 1em;
+    border: 1px solid #999;
+    border-radius: 4px;
+}
+
+.lyrics-form div {
+    display: flex;
+    gap: 10px;
+}
+
+.lyrics-form input {
+    line-height: 2em;
+    font-size: 1em;
+    flex: 1;
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.lyrics-form button {
+    padding: 8px 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.lyrics-form button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}

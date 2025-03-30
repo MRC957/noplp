@@ -1,0 +1,90 @@
+.song-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-basis: 48%; /* This makes each item take about half the container width minus gap */
+    min-width: 200px; /* Ensures reasonable minimum size */
+}
+
+.song-button {
+    width: 100%;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.song-button.success {
+    background-color: #28a745;
+    color: white;
+}
+
+.song-button.failure {
+    background-color: #dc3545;
+    color: white;
+}
+
+.song-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 5px;
+}
+
+.song-actions button {
+    flex: 1;
+    /* background-color: #f8f9fa; */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #212529;
+} 
+
+
+.lyrics-selector-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e9ecef; /* Adding distinct background color */
+    color: #212529; /* Adding text color */
+}
+
+.lyrics-selector-button:hover {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.song-selector {
+    background-color: #f8f8f8;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.select-prompt {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.song-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.song-option {
+    background-color: #e9ecef;
+    color: #212529;
+    border: 1px solid #ced4da;
+}
+
+.song-option:hover {
+    background-color: #007bff;
+    color: white;
+}

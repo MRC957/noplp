@@ -1,0 +1,69 @@
+.category {
+    border: solid 1px white;
+    padding: 0.3em;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.category-header .title {
+    flex: 1;
+}
+
+.category .title {
+    flex: 1;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.category .songs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; 
+    gap: 10px;
+}
+
+.category.changing {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.category.changing .title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    background-color: transparent;
+    color: #212529;
+    cursor: default;
+}
+
+.category-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.category-option {
+    background-color: #e9ecef;
+    color: #212529;
+    border: 1px solid #ced4da;
+}
+
+.category-option:hover {
+    background-color: #007bff;
+    color: white;
+}

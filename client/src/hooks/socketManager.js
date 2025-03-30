@@ -91,8 +91,13 @@ export const songSocket = {
 export const emitEvent = (eventName, data) => {
   const socketInstance = getSocket();
   if (socketInstance) {
-    console.log(`Emitting ${eventName} event:`, data || 'no data');
-    socketInstance.emit(eventName, data);
+    if (data === undefined) {
+      console.log(`Emitting ${eventName} event without data`);
+      socketInstance.emit(eventName);
+    } else {
+      console.log(`Emitting ${eventName} event:`, data);
+      socketInstance.emit(eventName, data);
+    }
     return true;
   }
   console.error(`Failed to emit ${eventName} event: Socket not initialized`);

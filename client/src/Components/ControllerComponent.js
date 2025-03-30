@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getSocket, emitEvent, controllerSocket } from "../hooks/socketManager";
+import PlaylistSelector from "./PlaylistSelector/PlaylistSelector";
+import LyricsControls from "./LyricsControls/LyricsControls";
+import LyricsSelector from "./LyricsSelector/LyricsSelector";
+import Category from "./Category/Category";
 import './ControllerComponent.css';
-
-// Add edit icon as SVG component for better styling and control
-const EditIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-    </svg>
-);
 
 const ControllerComponent = () => {
     const [state, setState] = useState({
@@ -249,17 +246,9 @@ const ControllerComponent = () => {
             });
     };
 
-    const handleProposeLyrics = () => {
-        const lyrics = state.proposedLyrics.trim();
+    const handleProposeLyrics = (lyrics) => {
         console.log('propose Lyrics', lyrics);
         controllerSocket.proposeLyrics(lyrics);
-    };
-    
-    const handleInput = (evt) => {
-        setState(prevState => ({
-            ...prevState,
-            proposedLyrics: evt.target.value,
-        }));
     };
     
     const handleLyricsFreeze = () => {
@@ -279,23 +268,6 @@ const ControllerComponent = () => {
 
     const handleLyricsContinue = () => {
         controllerSocket.continueLyrics();
-    };
-
-    // Handle input for new playlist name
-    const handleNewPlaylistNameChange = (evt) => {
-        setState(prevState => ({
-            ...prevState,
-            newPlaylistName: evt.target.value
-        }));
-    };
-
-    // Toggle save playlist form visibility
-    const toggleSavePlaylistForm = () => {
-        setState(prevState => ({
-            ...prevState,
-            showSavePlaylist: !prevState.showSavePlaylist,
-            newPlaylistName: prevState.currentPlaylist // Initialize with current name
-        }));
     };
 
     // Functions to handle category and song changes
@@ -432,8 +404,8 @@ const ControllerComponent = () => {
     };
 
     // Save current playlist with new name
-    const handleSavePlaylist = () => {
-        if (!state.newPlaylistName.trim()) {
+    const handleSavePlaylist = (newPlaylistName) => {
+        if (!newPlaylistName.trim()) {
             alert("Please enter a valid playlist name");
             return;
         }
@@ -441,8 +413,8 @@ const ControllerComponent = () => {
         // Prepare the playlist data to save
         const playlistToSave = {
             ...state.playlist,
-            name: state.newPlaylistName,
-            id: state.newPlaylistName // Use name as ID as well
+            name: newPlaylistName,
+            id: newPlaylistName // Use name as ID as well
         };
 
         // Send to server to save
@@ -467,7 +439,7 @@ const ControllerComponent = () => {
             
             setState(prevState => ({
                 ...prevState,
-                currentPlaylist: state.newPlaylistName,
+                currentPlaylist: newPlaylistName,
                 showSavePlaylist: false
             }));
         })
@@ -594,238 +566,65 @@ const ControllerComponent = () => {
     });
 
     const categoriesElements = categories.map(cat => {
-        // If we're in category changing mode and this is the category being changed
-        if (state.changingCategoryId === cat.id) {
-            return (
-                <div className="category changing" key={`category-${cat.id}`}>
-                    <div className="title">Select new category to replace "{cat.name}":</div>
-                    <div className="category-selector">
-                        {state.availableCategories.map(availableCategory => (
-                            <button 
-                                key={availableCategory.id}
-                                onClick={() => handleSelectNewCategory(availableCategory.id)}
-                                className="category-option"
-                            >
-                                {availableCategory.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-        
-        const songsElements = cat.songs.map(song => {
-            // If we're in song changing mode and this is the song being changed
-            if (state.changingSongId === song.id) {
-                return (
-                    <div className="song-selector" key={song.id}>
-                        <div className="select-prompt">Select a new song:</div>
-                        <div className="song-options">
-                            {state.availableSongs.map(availableSong => (
-                                <button 
-                                    key={availableSong.id}
-                                    onClick={() => handleSelectNewSong(availableSong.id)}
-                                    className="song-option"
-                                >
-                                    {availableSong.title} - {availableSong.artist}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
-            
-            // Determine button class based on validation result
-            let buttonClass = 'song-button';
-            if (state.songResults.hasOwnProperty(song.id)) {
-                buttonClass += state.songResults[song.id] ? ' success' : ' failure';
-            }
-            
-            return (
-                <div className="song-container" key={song.id}>
-                    <button 
-                        className={buttonClass}
-                        onClick={() => handleToSong(song.id)}
-                    >
-                        Go to "{song.title}"
-                    </button>
-                    <button 
-                        className="edit-button"
-                        onClick={() => handleChangeSong(song.id, cat.id)}
-                        aria-label="Edit song"
-                        title="Edit song"
-                    >
-                        <EditIcon />
-                    </button>
-                    <button
-                        className="lyrics-selector-button"
-                        onClick={() => handleToggleLyricsSelector(song.id)}
-                        aria-label="Select lyrics"
-                        title="Select lyrics to guess"
-                    >
-                        Lyrics
-                    </button>
-                </div>
-            );
-        }); 
-
         return (
-            <div className="category" key={`category-${cat.id}`}>
-                <div className="category-header">
-                    <button 
-                        className="title" 
-                        onClick={() => handleToSongList(cat.id)}
-                    >
-                        Go to "{cat.name}"
-                    </button>
-                    <button 
-                        className="edit-button"
-                        onClick={() => handleChangeCategory(cat.id)}
-                        aria-label="Edit category"
-                        title="Edit category"
-                    >
-                        {/* <EditIcon /> */}
-                    </button>
-                </div>
-                <div className="songs">
-                    {songsElements}
-                </div>
-            </div>
+            <Category
+                key={cat.id}
+                category={cat}
+                songs={cat.songs}
+                isChanging={state.changingCategoryId === cat.id}
+                availableCategories={state.availableCategories}
+                songResults={state.songResults}
+                changingSongId={state.changingSongId}
+                availableSongs={state.availableSongs}
+                onCategorySelect={handleToSongList}
+                onCategoryEdit={handleChangeCategory}
+                onNewCategorySelect={handleSelectNewCategory}
+                onSongSelect={handleToSong}
+                onSongEdit={handleChangeSong}
+                onSongLyricsSelect={handleToggleLyricsSelector}
+                onNewSongSelect={handleSelectNewSong}
+            />
         );
     });
 
-    const canPropose = state.expectedWords > 0 && 
-                       state.proposedLyrics.trim().replace(/'/g, ' ').split(/\s+/).filter(word => word.length > 0).length === state.expectedWords;
-
     return (
         <div className="controller">
-            <div className="service">
-                <div className="playlist-selector">
-                    <label htmlFor="playlist-select">Playlist: </label>
-                    <select 
-                        id="playlist-select"
-                        value={state.currentPlaylist} 
-                        onChange={handlePlaylistChange}
-                    >
-                        {state.availablePlaylists.map(playlist => (
-                            <option key={playlist.id} value={playlist.id}>
-                                {playlist.name}
-                            </option>
-                        ))}
-                    </select>
+            <div className="controller-header">
+                <div className="service">
+                    <PlaylistSelector 
+                        currentPlaylist={state.currentPlaylist}
+                        availablePlaylists={state.availablePlaylists}
+                        onPlaylistChange={handlePlaylistChange}
+                        onSavePlaylist={handleSavePlaylist}
+                    />
+                    <button onClick={handleToIntro}>To intro</button>
+                    <button onClick={handleToCategories}>To Categories</button>
+                    <button className="warn" onClick={handleReset}> RESET </button>
                 </div>
-                <button onClick={toggleSavePlaylistForm}>
-                    {state.showSavePlaylist ? 'Cancel' : 'Save Playlist As'}
-                </button>
-                <button onClick={handleToIntro}>To intro</button>
-                <button onClick={handleToCategories}>To Categories</button>
-                <button className="warn" onClick={handleReset}> RESET </button>
-            </div>
-            
-            {state.showSavePlaylist && (
-                <div className="save-playlist-form">
-                    <div className="form-group">
-                        <label htmlFor="newPlaylistName">New Playlist Name:</label>
-                        <input 
-                            id="newPlaylistName"
-                            type="text" 
-                            placeholder="Enter new playlist name" 
-                            value={state.newPlaylistName}
-                            onChange={handleNewPlaylistNameChange}
-                            className="playlist-name-input"
-                        />
-                        <button 
-                            onClick={handleSavePlaylist} 
-                            disabled={!state.newPlaylistName.trim()} 
-                            className="save-playlist-button"
-                        >
-                            Save
-                        </button>
-                    </div>
-                </div>
-            )}
-            
-            
-            <div className="lyrics-form">
-                <input  
-                    placeholder={`${state.expectedWords} mots attendu`} 
-                    ref={proposedLyricsRef} 
-                    onChange={handleInput} 
+                
+                <LyricsControls 
+                    expectedWords={state.expectedWords}
+                    onProposeLyrics={handleProposeLyrics}
+                    onFreeze={handleLyricsFreeze}
+                    onValidate={handleLyricsValidate}
+                    onReveal={handleLyricsReveal}
+                    onContinue={handleLyricsContinue}
                 />
-                <div>
-                    <button onClick={handleProposeLyrics} disabled={!canPropose}>Propose Lyrics</button>
-                    <button onClick={handleLyricsFreeze} disabled={!canPropose}>Freeze</button>
-                    <button onClick={handleLyricsValidate} disabled={!canPropose}>Validate</button>
-                    <button onClick={handleLyricsReveal}>Reveal</button>
-                    <button onClick={handleLyricsContinue}>Continue</button>
-                </div>
+                
+                <LyricsSelector 
+                    show={state.showLyricsSelector}
+                    songId={state.currentSongId}
+                    allLyrics={state.allLyrics}
+                    selectedLyricIndex={state.selectedLyricIndex}
+                    isLoading={state.lyricsLoading}
+                    onLyricSelect={handleSelectLyricToGuess}
+                    onClose={() => setState(prev => ({ ...prev, showLyricsSelector: false }))}
+                />
             </div>
             
-            {/* Lyrics Selector Panel */}
-            {state.showLyricsSelector && state.currentSongId && (
-                <div className="lyrics-selector-panel">
-                    <div className="lyrics-selector-header">
-                        <h3>
-                            Select Lyrics to Guess
-                            {state.lyricsLoading && <span className="loading-indicator"> Loading...</span>}
-                        </h3>
-                        <button 
-                            onClick={() => setState(prev => ({ ...prev, showLyricsSelector: false }))}
-                            className="close-button"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                    
-                    {state.lyricsLoading ? (
-                        <div className="lyrics-loading">Loading lyrics...</div>
-                    ) : state.allLyrics.length === 0 ? (
-                        <div className="lyrics-empty">No lyrics available for this song</div>
-                    ) : (
-                        <div className="lyrics-list">
-                            {state.allLyrics.map((lyric, index) => {
-                                // Format the time for display
-                                const timeInSeconds = Math.floor(lyric.startTimeMs / 1000);
-                                const minutes = Math.floor(timeInSeconds / 60);
-                                const seconds = timeInSeconds % 60;
-                                const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                                
-                                // Count words in this lyric
-                                const wordCount = lyric.word_count;
-                                
-                                // Check if this is the currently selected lyric
-                                const isSelected = index === state.selectedLyricIndex;
-                                
-                                // Check if this lyric is in the lyricsToGuess array
-                                const isGuessable = state.lyricsToGuess.some(g => g.startTimeMs === lyric.startTimeMs);
-                                
-                                return (
-                                    <div 
-                                        key={`lyric-${index}`}
-                                        className={`lyric-item ${isSelected ? 'selected' : ''} ${isGuessable ? 'guessable' : ''}`}
-                                        onClick={() => handleSelectLyricToGuess(index)}
-                                    >
-                                        <div className="lyric-time">{formattedTime}</div>
-                                        <div className="lyric-content">{lyric.words}</div>
-                                        <div className="lyric-word-count">({wordCount} words)</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                    
-                    <div className="lyrics-selector-footer">
-                        <button 
-                            onClick={() => setState(prev => ({ ...prev, showLyricsSelector: false }))}
-                            className="finish-button"
-                        >
-                            Done
-                        </button>
-                    </div>
-                </div>
-            )}
-            
-            {categoriesElements}
+            <div className="scrollable-categories">
+                {categoriesElements}
+            </div>
         </div>
     );
 };

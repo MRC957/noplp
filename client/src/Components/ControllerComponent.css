@@ -10,28 +10,10 @@
     flex: 1;
 }
 
-.edit-button {
-    background-color: #28a745; /* Green background */
-    color: white; /* White icon for contrast */
-    font-size: 0.8em;
-    padding: 6px;
-    width: 30px;
-    height: 30px;
-    min-width: unset;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-}
 
-.edit-button:hover {
-    background-color: #218838; /* Darker green on hover */
-}
-
-.edit-button svg {
-    width: 16px;
-    height: 16px;
+.edit-text {
+    font-weight: bold;
+    font-size: 0.9em;
 }
 
 .song-container {
@@ -119,11 +101,24 @@
 .controller {
     display: flex;
     flex-direction: column;
-    overflow-y: scroll;
-    row-gap: 0.5em;
     font-size: 1em;
-    padding: 20px;
-    margin-top: 2em;
+    padding: 0;
+    height: 100vh; /* Full height of the viewport */
+    overflow: hidden; /* Prevent scrolling on the main container */
+}
+
+.controller-header {
+    flex: 0 0 auto; /* Don't grow or shrink */
+    padding: 20px 20px 0;
+    background-color: black; /* Match the global background color */
+    z-index: 10; /* Ensure header stays on top */
+    border-bottom: 1px solid #333; /* Darker separator for better visibility on black */
+}
+
+.scrollable-categories {
+    flex: 1; /* Take remaining space */
+    overflow-y: auto; /* Enable scrolling */
+    padding: 0 20px 20px;
     margin-bottom: 5em;
 }
 
