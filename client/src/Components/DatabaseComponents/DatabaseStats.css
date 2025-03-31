@@ -1,7 +1,7 @@
 .db-stats-container {
   padding: 20px;
-  height: calc(100vh - 200px); /* Adjust based on header and navigation height */
-  overflow-y: auto; /* Enable vertical scrolling */
+  height: auto; /* Remove fixed height */
+  overflow-y: visible; /* Remove scrolling on container */
   position: relative;
 }
 

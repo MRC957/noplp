@@ -11,6 +11,7 @@ const CategoryList = ({
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
     let isMounted = true;
@@ -47,6 +48,14 @@ const CategoryList = ({
     };
   }, [onLoadCategories]);
 
+  // Filter categories based on search query
+  const filteredCategories = categories.filter(category => {
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return category.name.toLowerCase().includes(query);
+  });
+
   const handleExpandCategory = async (categoryId) => {
     // Toggle expanded state
     setExpandedCategories(prev => ({
@@ -75,68 +84,91 @@ const CategoryList = ({
     }
   };
 
-
-
   return (
     <div className="categories-view">
       <h2>Categories</h2>
+      
+      {/* Add category search box */}
+      <div className="category-search-container">
+        <input
+          type="text"
+          placeholder="Search categories by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="category-search-input"
+        />
+        {searchQuery && (
+          <button 
+            className="clear-search-button"
+            onClick={() => setSearchQuery('')}
+          >
+            ×
+          </button>
+        )}
+      </div>
+      
       {loading ? (
         <p>Loading categories...</p>
       ) : (
         <div className="categories-list">
-          {categories.map(category => (
-            <div key={category.id} className="category-card">
-              <div className="category-header">
-                <h3 onClick={() => handleExpandCategory(category.id)} className="category-title">
-                  {category.name} 
-                  <span className="song-count">
-                    ({category.songs ? category.songs.length : 0} songs)
-                  </span>
-                  <span className="expand-icon">
-                    {expandedCategories[category.id] ? '▼' : '►'}
-                  </span>
-                </h3>
-                <div className="category-actions">
-                  <button className="view-button" onClick={() => onSelectCategory(category.id)}>
-                    View Details
-                  </button>
-                  <button className="add-button" onClick={() => handleAddSongs(category.id)}>
-                    Add Songs
-                  </button>
+          {filteredCategories.length > 0 ? (
+            filteredCategories.map(category => (
+              <div key={category.id} className="category-card">
+                <div className="category-header">
+                  <h3 onClick={() => handleExpandCategory(category.id)} className="category-title">
+                    {category.name} 
+                    <span className="song-count">
+                      ({category.songs ? category.songs.length : 0} songs)
+                    </span>
+                    <span className="expand-icon">
+                      {expandedCategories[category.id] ? '▼' : '►'}
+                    </span>
+                  </h3>
+                  <div className="category-actions">
+                    <button className="view-button" onClick={() => onSelectCategory(category.id)}>
+                      View Details
+                    </button>
+                    <button className="add-button" onClick={() => handleAddSongs(category.id)}>
+                      Add Songs
+                    </button>
+                  </div>
                 </div>
+                
+                {expandedCategories[category.id] && (
+                  <div className="category-songs">
+                    {category.songs && category.songs.length > 0 ? (
+                      <ul className="song-list">
+                        {category.songs.map(song => (
+                          <li key={song.id} className="song-item">
+                            <div className="db-song-info">
+                              <span className="db-song-title">{song.title}</span>
+                              <span className="db-song-artist">by {song.artist}</span>
+                            </div>
+                            <button 
+                              className="remove-button"
+                              onClick={() => handleRemoveSong(song.id, category.id)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="no-songs-message">No songs in this category</p>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {expandedCategories[category.id] && (
-                <div className="category-songs">
-                  {category.songs && category.songs.length > 0 ? (
-                    <ul className="song-list">
-                      {category.songs.map(song => (
-                        <li key={song.id} className="song-item">
-                          <div className="db-song-info">
-                            <span className="db-song-title">{song.title}</span>
-                            <span className="db-song-artist">by {song.artist}</span>
-                          </div>
-                          <button 
-                            className="remove-button"
-                            onClick={() => handleRemoveSong(song.id, category.id)}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="no-songs-message">No songs in this category</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="no-items-message">
+              {searchQuery 
+                ? `No categories found matching "${searchQuery}"`
+                : "No categories found. Create some categories to get started."
+              }
+            </p>
+          )}
         </div>
-      )}
-
-      {categories.length === 0 && !loading && (
-        <p className="no-items-message">No categories found. Create some categories to get started.</p>
       )}
     </div>
   );

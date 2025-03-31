@@ -14,7 +14,8 @@ const SongList = ({
   const [expandedSongs, setExpandedSongs] = useState({});
   const [showAddCategoryPanel, setShowAddCategoryPanel] = useState(false);
   const [selectedSongForCategories, setSelectedSongForCategories] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [songSearchQuery, setSongSearchQuery] = useState('');
   
   // Fetch songs on component mount
   useEffect(() => {
@@ -52,11 +53,11 @@ const SongList = ({
     };
   }, []); // Empty dependency array - only run on mount
 
-  // Filter available categories based on search query
+  // Filter categories based on search query
   const filteredCategories = categories.filter(category => {
     // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (categorySearchQuery) {
+      const query = categorySearchQuery.toLowerCase();
       if (!category.name.toLowerCase().includes(query)) return false;
     }
     
@@ -68,6 +69,17 @@ const SongList = ({
       }
     }
     return true;
+  });
+
+  // Filter songs based on search query
+  const filteredSongs = songs.filter(song => {
+    if (!songSearchQuery) return true;
+    
+    const query = songSearchQuery.toLowerCase();
+    const matchesTitle = song.title.toLowerCase().includes(query);
+    const matchesArtist = song.artist.toLowerCase().includes(query);
+    
+    return matchesTitle || matchesArtist;
   });
 
   const handleExpandSong = (songId) => {
@@ -102,74 +114,98 @@ const SongList = ({
   return (
     <div className="songs-view">
       <h2>Songs</h2>
+      
+      {/* Add song search box */}
+      <div className="song-search-container">
+        <input
+          type="text"
+          placeholder="Search songs by title or artist..."
+          value={songSearchQuery}
+          onChange={(e) => setSongSearchQuery(e.target.value)}
+          className="song-search-input"
+        />
+        {songSearchQuery && (
+          <button 
+            className="clear-search-button"
+            onClick={() => setSongSearchQuery('')}
+          >
+            ×
+          </button>
+        )}
+      </div>
+      
       {loading ? (
         <p>Loading songs...</p>
       ) : (
         <div className="songs-list">
-          {songs.map(song => (
-            <div key={song.id} className="song-card">
-              <div className="song-header">
-                <h3 onClick={() => handleExpandSong(song.id)} className="song-title">
-                  {song.title}
-                  <span className="artist-name">
-                    by {song.artist}
-                  </span>
-                  <span className="categories-count">
-                    ({song.categories ? song.categories.length : 0} categories)
-                  </span>
-                  <span className="expand-icon">
-                    {expandedSongs[song.id] ? '▼' : '►'}
-                  </span>
-                </h3>
-                <div className="song-actions">
-                  <button 
-                    className="add-button"
-                    onClick={() => handleAddCategories(song.id)}
-                  >
-                    Add Categories
-                  </button>
-                  <button 
-                    className="view-button" 
-                    onClick={() => onSelectSong(song.id)}
-                  >
-                    View Details
-                  </button>
+          {filteredSongs.length > 0 ? (
+            filteredSongs.map(song => (
+              <div key={song.id} className="song-card">
+                <div className="song-header">
+                  <h3 onClick={() => handleExpandSong(song.id)} className="song-title">
+                    {song.title}
+                    <span className="artist-name">
+                      by {song.artist}
+                    </span>
+                    <span className="categories-count">
+                      ({song.categories ? song.categories.length : 0} categories)
+                    </span>
+                    <span className="expand-icon">
+                      {expandedSongs[song.id] ? '▼' : '►'}
+                    </span>
+                  </h3>
+                  <div className="song-actions">
+                    <button 
+                      className="add-button"
+                      onClick={() => handleAddCategories(song.id)}
+                    >
+                      Add Categories
+                    </button>
+                    <button 
+                      className="view-button" 
+                      onClick={() => onSelectSong(song.id)}
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
+                
+                {expandedSongs[song.id] && (
+                  <div className="song-details">
+                    {song.categories && song.categories.length > 0 ? (
+                      <div className="song-categories-list">
+                        <h4>Categories:</h4>
+                        <ul className="categories-list">
+                          {song.categories.map(category => (
+                            <li key={category.id} className="category-item">
+                              {category.name}
+                              <button 
+                                className="remove-button"
+                                onClick={() => handleRemoveCategory(song.id, category.id)}
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="no-categories-message">No categories assigned to this song</p>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {expandedSongs[song.id] && (
-                <div className="song-details">
-                  {song.categories && song.categories.length > 0 ? (
-                    <div className="song-categories-list">
-                      <h4>Categories:</h4>
-                      <ul className="categories-list">
-                        {song.categories.map(category => (
-                          <li key={category.id} className="category-item">
-                            {category.name}
-                            <button 
-                              className="remove-button"
-                              onClick={() => handleRemoveCategory(song.id, category.id)}
-                            >
-                              Remove
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <p className="no-categories-message">No categories assigned to this song</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="no-items-message">
+              {songSearchQuery 
+                ? `No songs found matching "${songSearchQuery}"`
+                : "No songs found. Add songs to get started."}
+            </p>
+          )}
         </div>
       )}
 
-      {songs.length === 0 && !loading && (
-        <p className="no-items-message">No songs found. Add songs to get started.</p>
-      )}
-      
       {showAddCategoryPanel && selectedSongForCategories && (
         <div className="add-categories-panel">
           <div className="panel-header">
@@ -181,10 +217,8 @@ const SongList = ({
               type="text" 
               placeholder="Search categories by name..." 
               id="category-search"
-              onChange={(e) => {
-                // Handle the search in real-time
-                setSearchQuery(e.target.value);
-              }}
+              value={categorySearchQuery}
+              onChange={(e) => setCategorySearchQuery(e.target.value)}
             />
           </div>
           <div className="available-categories">
@@ -212,11 +246,8 @@ const SongList = ({
                     </li>
                   ))}
                 </ul>
-                <p id="no-categories-message" className="no-categories-available" style={{ display: 'none' }}>
-                  No matching categories found
-                </p>
               </>
-            ) : searchQuery ? (
+            ) : categorySearchQuery ? (
               <p className="no-categories-available">No matching categories found</p>
             ) : (
               <p className="no-categories-available">Loading categories...</p>
