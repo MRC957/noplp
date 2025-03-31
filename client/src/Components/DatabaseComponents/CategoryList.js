@@ -5,10 +5,8 @@ const CategoryList = ({
   onLoadCategories, 
   onSelectCategory, 
   onLoadSongs, 
-  onAddSong, 
   onRemoveSong,
   onAddSongs,
-  onDeleteCategory
 }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -77,16 +75,7 @@ const CategoryList = ({
     }
   };
 
-  const handleDeleteCategory = async (categoryId, event) => {
-    // Stop propagation to prevent the view details action from triggering
-    event.stopPropagation();
-    try {
-      await onDeleteCategory(categoryId);
-      // Categories will be refreshed by the parent component after successful deletion
-    } catch (error) {
-      console.error("Error deleting category:", error);
-    }
-  };
+
 
   return (
     <div className="categories-view">

@@ -8,7 +8,6 @@ import uuid
 from spotify import SpotifyDriver, SpotifyLyricsDriver
 from database import init_db, db, Song, Category
 from db_populator import DatabasePopulator
-from song_populator import LrcLibDriver
 import logging
 from dotenv import load_dotenv
 
@@ -383,11 +382,12 @@ def add_song():
         track_name = data.get('track_name')
         artist = data.get('artist')
         category_ids = data.get('category_ids', [])
+        track_id = data.get('track_id')
         
-        if not track_name or not artist:
-            return jsonify({"error": "Track name and artist are required"}), 400
+        if (not track_name or not artist) and not track_id:
+            return jsonify({"error": "Track ID or Track name and artist are required"}), 400
         
-        result = db_populator.search_and_add_song(track_name, artist, category_ids)
+        result = db_populator.search_and_add_song(track_name, artist, category_ids, track_id)
         
         if result:
             return jsonify(result), 200
@@ -618,6 +618,30 @@ def delete_category(category_id):
     except Exception as e:
         db.session.rollback()
         logger.exception(f"Error deleting category: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Add endpoint to delete a song
+@app.route('/api/database/songs/<song_id>', methods=['DELETE'])
+def delete_song(song_id):
+    try:
+        with app.app_context():
+            # Find the song
+            song = Song.query.get(song_id)
+            
+            if not song:
+                return jsonify({"error": f"Song with ID {song_id} not found"}), 404
+                
+            # Remove associations with categories but keep the categories
+            song.categories = []
+                
+            # Delete the song
+            db.session.delete(song)
+            db.session.commit()
+            
+            return jsonify({"message": f"Song '{song.title}' deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error deleting song: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # Add endpoint to get all categories with their songs

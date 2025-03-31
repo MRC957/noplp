@@ -253,10 +253,8 @@ const deleteSong = async (songId) => {
             onLoadCategories={fetchCategories} 
             onSelectCategory={loadCategoryDetails}
             onLoadSongs={fetchSongs}
-            onAddSong={addSongToCategory}
             onRemoveSong={removeSongFromCategory}
             onAddSongs={handleAddSongs}
-            onDeleteCategory={deleteCategory} // Pass deleteCategory function
           />
         );
       case 'song-details':

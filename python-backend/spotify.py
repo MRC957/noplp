@@ -90,45 +90,49 @@ class SpotifyDriver:
         if len(items) == 0:
             raise RuntimeError(f"No tracks found for {query}")
 
-        track_id = items[0].get('id')
-        df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
+        track = items[0]
+        track["artist"] = track.get('artists')[0].get("name")
+
+        # track_id = items[0].get('id')
+        # df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
 
         # Get preview URL from the track data
-        preview_url = items[0].get('preview_url')
-        if not preview_url:
-            raise RuntimeError(f"No preview URL available for track {track_id}")
+        # preview_url = items[0].get('preview_url')
+        # if not preview_url:
+        #     raise RuntimeError(f"No preview URL available for track {track_id}")
 
         return {
-            'track': items[0],
-            'lyrics': df_lyrics,
-            'preview_url': preview_url
+            'track': track,
+            # 'lyrics': df_lyrics,
+            # 'preview_url': preview_url
         }
 
     @refresh_login
-    def search_track(self, track_name, artist):
-        type = SpotifySearchType.TRACK.value
-        query = f"{track_name} artist:{artist}"
-
-        url = f"{self.BASE_API_ADDRESS}{self.SEARCH_API}"
+    def search_track(self, track_id):
+        url = f"{self.BASE_API_ADDRESS}/tracks/{track_id}"
         headers = {
             "Authorization": f"Bearer {self.token}",
         }
-        params = {
-            "type": type,
-            "q": query
-        }
-        rsp = requests.get(url, headers=headers, params=params)
+        
+        rsp = requests.get(url, headers=headers)
 
         if rsp.status_code > 299:
-            raise RuntimeError(f"Failed to search in spotify: {rsp.json()}")
+            raise RuntimeError(f"Failed to get track from Spotify: {rsp.json()}")
 
-        rsp_json = rsp.json()
+        track = rsp.json()
 
-        items = rsp_json.get('tracks').get('items')
-        if len(items) == 0:
-            raise RuntimeError(f"No tracks found for {query}")
+        # Get preview URL from the track data
+        # preview_url = track.get('preview_url')
+        # if not preview_url:
+        #     raise RuntimeError(f"No preview URL available for track {track_id}")
 
-        return items[0]
+        track["artist"] = track.get('artists')[0].get("name")
+
+        return {
+            'track': track,
+            # 'preview_url': preview_url
+        }
+
     
     @refresh_login
     def get_track(self, track_id):

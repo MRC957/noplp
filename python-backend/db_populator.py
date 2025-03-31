@@ -4,6 +4,7 @@ import logging
 import uuid
 import pandas as pd
 from spotify import SpotifyDriver, SpotifyLyricsDriver
+from song_populator import LrcLibDriver
 from database import db, Song, Category
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,8 @@ class DatabasePopulator:
     def __init__(self, app=None):
         self.app = app
         self.spotify_driver = SpotifyDriver()
-        self.lyrics_driver = SpotifyLyricsDriver()
+        self.lyrics_driver = LrcLibDriver()
+        # self.lyrics_driver = SpotifyLyricsDriver()
     
     def import_playlists_from_json(self, force_update=False):
         """Import all playlists from JSON files into the database"""
@@ -157,20 +159,29 @@ class DatabasePopulator:
                 except Exception as e:
                     logger.exception(f"Error fetching lyrics for {song.id}: {str(e)}")
     
-    def search_and_add_song(self, track_name, artist, category_ids=None):
+    def search_and_add_song(self, track_name, artist, category_ids=None, track_id=None):
         """Search for a song on Spotify and add it to the database"""
         try:
-            search_result = self.spotify_driver.search(track_name, artist)
-            
+            if track_id:
+                search_result = self.spotify_driver.search_track(track_id)
+            else:
+                search_result = self.spotify_driver.search(track_name, artist)
+
             track_data = search_result.get('track')
-            lyrics_df = search_result.get('lyrics')
+            track_name = track_data.get('name')
+            artist_name = track_data.get('artist')
+            track_id = track_data.get('id')
+
+            lyrics_df = self.lyrics_driver.get_lyrics(track_name, artist_name)
             
-            if not track_data or not lyrics_df or lyrics_df.empty:
+            if not track_data or lyrics_df is None or lyrics_df.empty:
                 logger.error(f"No track or lyrics found for {track_name} by {artist}")
                 return None
+
+
             
             with self.app.app_context():
-                track_id = track_data.get('id')
+                # track_id = track_data.get('id')
                 
                 # Create or update song
                 song = Song.query.get(track_id)
