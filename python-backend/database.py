@@ -31,9 +31,9 @@ class Song(db.Model):
     
     def __repr__(self):
         return f"<Song {self.title} by {self.artist}>"
-    
-    def to_dict(self):
-        return {
+
+    def to_dict(self, include_categories_full=False):
+        result = {
             'id': self.id,
             'track_id': self.id,  # For backward compatibility
             'artist': self.artist,
@@ -42,6 +42,11 @@ class Song(db.Model):
             'categories': [category.id for category in self.categories],
             'lyrics': self.lyrics or []
         }
+        
+        if include_categories_full:
+            result['categories'] = [category.to_dict() for category in self.categories]
+            
+        return result
 
 class Category(db.Model):
     __tablename__ = 'categories'

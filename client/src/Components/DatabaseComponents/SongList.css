@@ -1,0 +1,243 @@
+.songs-view {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.songs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.song-card {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.song-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.song-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.song-title {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.artist-name {
+  font-size: 14px;
+  color: #666;
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+.expand-icon {
+  margin-left: 8px;
+  color: #666;
+}
+
+.song-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.song-details {
+  margin-top: 16px;
+  border-top: 1px solid #ddd;
+  padding-top: 16px;
+}
+
+.song-categories-list h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.categories-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-item {
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-button, .view-button, .remove-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.add-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.add-button:hover {
+  background-color: #45a049;
+}
+
+.view-button {
+  background-color: #2196f3;
+  color: white;
+}
+
+.view-button:hover {
+  background-color: #0b7dda;
+}
+
+.remove-button {
+  background-color: #f44336;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.remove-button:hover {
+  background-color: #d32f2f;
+}
+
+.no-categories-message,
+.no-items-message {
+  color: #666;
+  font-style: italic;
+}
+
+/* Add Categories Panel */
+.add-categories-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+.panel-header h3 {
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.search-bar {
+  padding: 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.available-categories {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.selection-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.available-category-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+}
+
+.db-category-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-category-name {
+  font-weight: bold;
+  color: #333;
+}
+
+.no-categories-available {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .song-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .song-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .add-categories-panel {
+    width: 95%;
+    max-height: 90vh;
+  }
+}

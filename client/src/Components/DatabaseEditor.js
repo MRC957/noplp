@@ -64,8 +64,7 @@ const DatabaseEditor = () => {
   const fetchSongs = async (categoryId = null) => {
     setLoading(true);
     try {
-      let url = '/api/songs';
-      const response = await axios.get(url);
+      const response = await axios.get('/api/database/songs-with-categories');
       setSongs(response.data);
       return response.data;
     } catch (err) {
@@ -199,6 +198,24 @@ const DatabaseEditor = () => {
     }
   };
 
+const deleteSong = async (songId) => {
+    try {
+        if (window.confirm('Are you sure you want to delete this song? This action cannot be undone.')) {
+            await axios.delete(`/api/database/songs/${songId}`);
+            // Refresh data
+            fetchStats();
+            setView('songs');
+            await fetchSongs(); // Refresh the songs list
+            return true;
+        }
+        return false;
+    } catch (err) {
+        setError('Failed to delete song');
+        console.error(err);
+        return false;
+    }
+};
+
   const handleAddSongSuccess = () => {
     fetchStats();
     setView('dashboard');
@@ -245,44 +262,101 @@ const DatabaseEditor = () => {
       case 'song-details':
         return (
           <div className="details-view">
+            <div className="details-header">
+              <button 
+              onClick={() => setView('songs')}
+              className="back-button">
+            Back to Songs
+              </button>
+              <button onClick={() => fetchCategories().then(cats => {
+              setView('add-category-to-song');
+            })}
+            className="add-button">
+            Add to Category
+            </button>
+              <button 
+            onClick={() => deleteSong(selectedSong.id)}
+            className="delete-button danger-button">
+            Delete Song
+              </button>  
+            </div>               
             <h2>Song Details</h2>
             {selectedSong ? (
               <div>
-                <h3>{selectedSong.title} by {selectedSong.artist}</h3>
-                <p>ID: {selectedSong.id}</p>
-                <div className="song-categories">
-                  <h4>Categories:</h4>
-                  {selectedSong.categories?.length > 0 ? (
-                    <ul>
-                      {selectedSong.categories.map(cat => (
-                        <li key={cat.id}>
-                          {cat.name}
-                          <button onClick={() => removeSongFromCategory(selectedSong.id, cat.id)}>
-                            Remove
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No categories assigned</p>
-                  )}
-                </div>
-                <button onClick={() => fetchCategories().then(cats => {
-                  setView('add-category-to-song');
-                })}>Add to Category</button>
-                {selectedSong.lyrics ? (
-                  <div>
-                    <h4>Lyrics Available</h4>
-                    <p>This song has {selectedSong.lyrics.length} lyric lines.</p>
-                  </div>
-                ) : (
-                  <p>No lyrics available for this song.</p>
-                )}
+            <h3>{selectedSong.title} by {selectedSong.artist}</h3>
+            <p>ID: {selectedSong.id}</p>
+            <div className="song-categories">
+              <h3>Categories:</h3>
+              {selectedSong.categories?.length > 0 ? (
+            <ul>
+              {selectedSong.categories.map(cat => (
+            <li key={cat.id}>
+              {cat.name}
+              <button 
+              onClick={() => removeSongFromCategory(selectedSong.id, cat.id)}
+              className="delete-button danger-button">
+                Remove
+              </button>
+            </li>
+              ))}
+            </ul>
+              ) : (
+            <p>No categories assigned</p>
+              )}
+            </div>
+
+            {selectedSong.lyrics ? (
+              <div className="song-lyrics">
+            <h4>{selectedSong.lyrics.length} lyric lines.</h4>
+            <table className="lyrics-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Lyrics</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedSong.lyrics.map((line, index) => {
+                  // Check if line is an object with required properties
+                  const isObject = typeof line === 'object' && line !== null;
+                  
+                  if (isObject && 'startTimeMs' in line && 'words' in line) {
+                    // Format timestamp from milliseconds to mm:ss
+                    const timeInSeconds = Math.floor(line.startTimeMs / 1000);
+                    const minutes = Math.floor(timeInSeconds / 60);
+                    const seconds = timeInSeconds % 60;
+                    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                return (
+                  <tr key={index}>
+                    <td>{formattedTime}</td>
+                    <td>{line.words}</td>
+                  </tr>
+                );
+                  } else {
+                // Fallback for string format (try to parse or display as is)
+                const parts = typeof line === 'string' && line.includes(':') 
+                  ? line.split(':', 2) 
+                  : ['-', line];
+                return (
+                  <tr key={index}>
+                    <td>{parts[0].trim()}</td>
+                    <td>{parts[1].trim()}</td>
+                  </tr>
+                );
+                  }
+                })}
+              </tbody>
+            </table>
+              </div>
+            ) : (
+              <p>No lyrics available for this song.</p>
+            )}
               </div>
             ) : (
               <p>Loading song details...</p>
             )}
-            <button onClick={() => setView('songs')}>Back to Songs</button>
+            
           </div>
         );
       case 'category-details':

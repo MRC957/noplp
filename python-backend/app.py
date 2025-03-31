@@ -470,6 +470,22 @@ def get_category_details(category_id):
         logger.exception(f"Error getting category details: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/database/songs/<song_id>', methods=['GET'])
+def get_song_details(song_id):
+    try:
+        with app.app_context():
+            # Find the song by ID
+            song = Song.query.get(song_id)
+            
+            if not song:
+                return jsonify({"error": f"Song with ID {song_id} not found"}), 404
+                
+            # Return song details including its categories
+            return jsonify(song.to_dict(include_categories_full=True)), 200
+    except Exception as e:
+        logger.exception(f"Error getting song details: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/database/categories/<category_id>/songs', methods=['POST'])
 def add_songs_to_category(category_id):
     try:
@@ -507,6 +523,45 @@ def add_songs_to_category(category_id):
     except Exception as e:
         db.session.rollback()
         logger.exception(f"Error adding songs to category: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/database/songs/<song_id>/categories', methods=['POST'])
+def add_categories_to_song(song_id):
+    try:
+        data = request.json
+        if not data or 'category_ids' not in data:
+            return jsonify({"error": "Category IDs are required"}), 400
+            
+        category_ids = data['category_ids']
+        
+        with app.app_context():
+            # Find the song
+            song = Song.query.get(song_id)
+            
+            if not song:
+                return jsonify({"error": f"Song with ID {song_id} not found"}), 404
+                
+            # Find and associate the categories
+            categories_added = []
+            for category_id in category_ids:
+                category = Category.query.get(category_id)
+                if category:
+                    # Check if association already exists
+                    if category not in song.categories:
+                        song.categories.append(category)
+                        categories_added.append(category.to_dict())
+            
+            # Commit the changes
+            db.session.commit()
+            
+            return jsonify({
+                "message": f"Added {len(categories_added)} categories to song '{song.title}'",
+                "song": song.to_dict(),
+                "categories_added": categories_added
+            }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error adding categories to song: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/database/songs/<song_id>/categories/<category_id>', methods=['DELETE'])
@@ -578,6 +633,21 @@ def get_categories_with_songs():
             return jsonify(categories_data)
     except Exception as e:
         logger.exception(f"Error getting categories with songs: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Add endpoint to get all categories with their songs
+@app.route('/api/database/songs-with-categories', methods=['GET'])
+def get_songs_with_categories():
+    try:
+        # First check if database needs initialization
+        initialize_database()
+        
+        with app.app_context():
+            songs = Song.query.all()
+            songs_data = [song.to_dict(include_categories_full=True) for song in songs]
+            return jsonify(songs_data)
+    except Exception as e:
+        logger.exception(f"Error getting songs with categories: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # Add endpoint to save a playlist
