@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './SongList.css';
 
 const SongList = ({ 
@@ -16,6 +17,7 @@ const SongList = ({
   const [selectedSongForCategories, setSelectedSongForCategories] = useState(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [songSearchQuery, setSongSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
   
   // Fetch songs on component mount
   useEffect(() => {
@@ -91,6 +93,9 @@ const SongList = ({
   };
 
   const handleAddCategories = async (songId) => {
+    // Reset selected categories when opening the panel
+    setSelectedCategories([]);
+    
     // Load all categories first to ensure they're available for filtering
     const fetchedCategories = await onLoadCategories();
     setCategories(fetchedCategories || []);
@@ -108,6 +113,40 @@ const SongList = ({
       setSongs(updatedSongs);
     } catch (error) {
       console.error("Error removing category from song:", error);
+    }
+  };
+
+  const handleCategorySelection = (categoryId) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        // Remove if already selected
+        return prev.filter(id => id !== categoryId);
+      } else {
+        // Add if not selected
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const handleAddSelectedCategories = async () => {
+    if (selectedCategories.length === 0 || !selectedSongForCategories) return;
+    
+    try {
+      // Use axios instead of fetch
+      await axios.post(`/api/database/songs/${selectedSongForCategories}/categories`, {
+        category_ids: selectedCategories
+      });
+      
+      // Refresh songs after adding categories
+      const updatedSongs = await onLoadSongs();
+      setSongs(updatedSongs);
+      
+      // Close the panel and reset selected categories
+      setShowAddCategoryPanel(false);
+      setSelectedCategories([]);
+      
+    } catch (error) {
+      console.error("Error adding categories to song:", error);
     }
   };
 
@@ -227,25 +266,29 @@ const SongList = ({
                 <ul id="available-categories-list" className="selection-list">
                   {filteredCategories.map(category => (
                     <li key={category.id} className="available-category-item">
-                      <div className="db-category-info">
-                        <span className="db-category-name">{category.name}</span>
+                      <div className="category-checkbox">
+                        <input
+                          type="checkbox"
+                          id={`category-${category.id}`}
+                          checked={selectedCategories.includes(category.id)}
+                          onChange={() => handleCategorySelection(category.id)}
+                        />
+                        <label htmlFor={`category-${category.id}`} className="db-category-name">
+                          {category.name}
+                        </label>
                       </div>
-                      <button 
-                        className="add-button"
-                        onClick={async () => {
-                          const success = await onAddCategory(selectedSongForCategories, category.id);
-                          if (success) {
-                            // Refresh the songs list
-                            const updatedSongs = await onLoadSongs();
-                            setSongs(updatedSongs);
-                          }
-                        }}
-                      >
-                        Add
-                      </button>
                     </li>
                   ))}
                 </ul>
+                <div className="categories-actions">
+                  <button 
+                    className="add-selected-button"
+                    onClick={handleAddSelectedCategories}
+                    disabled={selectedCategories.length === 0}
+                  >
+                    Add Selected Categories ({selectedCategories.length})
+                  </button>
+                </div>
               </>
             ) : categorySearchQuery ? (
               <p className="no-categories-available">No matching categories found</p>

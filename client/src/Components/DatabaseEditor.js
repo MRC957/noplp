@@ -140,25 +140,28 @@ const DatabaseEditor = () => {
     }
   };
 
-  const addCategoryToSong = async (songId, categoryId) => {
+  // Function to add multiple categories to a song
+  const addCategoriesToSong = async (songId, categoryIds) => {
     try {
       await axios.post(`/api/database/songs/${songId}/categories`, {
-        category_ids: [categoryId]
+        category_ids: categoryIds
       });
       // Refresh data
       if (selectedSong) {
         loadSongDetails(songId);
       }
-      if (selectedCategory) {
-        loadCategoryDetails(categoryId);
-      }
       fetchStats();
       return true;
     } catch (err) {
-      setError('Failed to associate category with song');
+      setError('Failed to associate categories with song');
       console.error(err);
       return false;
     }
+  };
+
+  // Original function kept for backward compatibility
+  const addCategoryToSong = async (songId, categoryId) => {
+    return addCategoriesToSong(songId, [categoryId]);
   };
 
   const removeSongFromCategory = async (songId, categoryId) => {
@@ -423,30 +426,79 @@ const deleteSong = async (songId) => {
           </div>
         );
 
-      case 'add-category-to-song':
-        return (
-          <div className="selection-view">
-            <h2>Add {selectedSong?.title} to Categories</h2>
-            <ul className="selection-list">
-              {categories.map(category => {
-                // Check if category already contains the song
-                const hasSong = selectedSong?.categories?.some(c => c.id === category.id);
-                return !hasSong ? (
-                  <li key={category.id}>
-                    {category.name}
-                    <button onClick={() => {
-                      addCategoryToSong(selectedSong.id, category.id)
-                        .then(() => loadSongDetails(selectedSong.id));
-                    }}>
-                      Add
-                    </button>
-                  </li>
-                ) : null;
-              })}
-            </ul>
-            <button onClick={() => loadSongDetails(selectedSong.id)}>Back</button>
-          </div>
-        );
+      case 'add-category-to-song': {
+        // Use a functional component approach for this view
+        const AddCategoriesToSongView = () => {
+          const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+          
+          const handleCategorySelection = (categoryId) => {
+            setSelectedCategoryIds(prev => 
+              prev.includes(categoryId) 
+                ? prev.filter(id => id !== categoryId)
+                : [...prev, categoryId]
+            );
+          };
+          
+          const handleAddSelectedCategories = () => {
+            if (selectedCategoryIds.length > 0) {
+              addCategoriesToSong(selectedSong.id, selectedCategoryIds)
+                .then(() => {
+                  loadSongDetails(selectedSong.id);
+                  setSelectedCategoryIds([]);
+                });
+            }
+          };
+          
+          return (
+            <div className="selection-view">
+              <h2>Add {selectedSong?.title} to Categories</h2>
+              <div className="category-selection-container">
+                <ul className="selection-list">
+                  {categories.map(category => {
+                    // Check if category already contains the song
+                    const hasSong = selectedSong?.categories?.some(c => c.id === category.id);
+                    return !hasSong ? (
+                      <li key={category.id} className="category-selection-item">
+                        <div className="category-checkbox">
+                          <input
+                            type="checkbox"
+                            id={`sel-category-${category.id}`}
+                            checked={selectedCategoryIds.includes(category.id)}
+                            onChange={() => handleCategorySelection(category.id)}
+                          />
+                          <label htmlFor={`sel-category-${category.id}`}>
+                            {category.name}
+                          </label>
+                        </div>
+                      </li>
+                    ) : null;
+                  })}
+                </ul>
+                
+                <div className="selection-actions">
+                  <button 
+                    className="add-selected-button"
+                    onClick={handleAddSelectedCategories}
+                    disabled={selectedCategoryIds.length === 0}
+                  >
+                    Add Selected Categories ({selectedCategoryIds.length})
+                  </button>
+                  <button 
+                    className="cancel-button"
+                    onClick={() => {
+                      loadSongDetails(selectedSong.id);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        };
+        
+        return <AddCategoriesToSongView />;
+      }
       case 'add-song':
         return <AddSongForm onSuccess={handleAddSongSuccess} onCancel={() => setView('dashboard')} />;
       case 'add-category':
