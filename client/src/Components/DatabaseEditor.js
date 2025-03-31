@@ -22,6 +22,7 @@ const DatabaseEditor = () => {
   const [showAddSongPanel, setShowAddSongPanel] = useState(false);
   const [selectedCategoryForSongs, setSelectedCategoryForSongs] = useState(null);
   const [searchQuery, setSearchQuery] = useState(''); // New state for search query
+  const [selectedSongIds, setSelectedSongIds] = useState([]);
 
   // Fetch initial data
   useEffect(() => {
@@ -119,22 +120,26 @@ const DatabaseEditor = () => {
     }
   };
 
-  const addSongToCategory = async (songId, categoryId) => {
+  const addSongToCategory = async (songIds, categoryId) => {
     try {
+      // If songIds is not an array, convert it to an array for backward compatibility
+      const songIdsArray = Array.isArray(songIds) ? songIds : [songIds];
+      
       await axios.post(`/api/database/categories/${categoryId}/songs`, {
-        song_ids: [songId]
+        song_ids: songIdsArray
       });
+      
       // Refresh data
       if (selectedCategory) {
         loadCategoryDetails(categoryId);
       }
       if (selectedSong) {
-        loadSongDetails(songId);
+        loadSongDetails(selectedSong.id);
       }
       fetchStats();
       return true;
     } catch (err) {
-      setError('Failed to associate song with category');
+      setError('Failed to associate songs with category');
       console.error(err);
       return false;
     }
@@ -251,6 +256,31 @@ const deleteSong = async (songId) => {
     setSelectedCategoryForSongs(categoryId);
     // Show the add songs panel
     setShowAddSongPanel(true);
+  };
+
+  const handleSongSelection = (songId) => {
+    setSelectedSongIds(prev => 
+      prev.includes(songId) 
+        ? prev.filter(id => id !== songId)
+        : [...prev, songId]
+    );
+  };
+
+  // Handle adding multiple selected songs to a category
+  const handleAddSelectedSongs = async () => {
+    if (selectedSongIds.length === 0 || !selectedCategoryForSongs) return;
+    
+    const success = await addSongToCategory(selectedSongIds, selectedCategoryForSongs);
+    if (success) {
+      // Clear selection after successful addition
+      setSelectedSongIds([]);
+      // Refresh the songs list by getting the updated category
+      if (view === 'category-details' && selectedCategory) {
+        loadCategoryDetails(selectedCategory.id);
+      } else {
+        fetchCategories();
+      }
+    }
   };
 
   const renderView = () => {
@@ -385,7 +415,9 @@ const deleteSong = async (songId) => {
                 Back to Categories
               </button>
               <button 
-                onClick={() => handleAddSongs(selectedCategory.id)}
+                onClick={() => fetchSongs().then(songs => {
+                  setView('add-songs-to-category');
+                })}
                 className="add-button">
                 Add Songs
               </button>
@@ -499,6 +531,86 @@ const deleteSong = async (songId) => {
         
         return <AddCategoriesToSongView />;
       }
+      case 'add-songs-to-category': {
+        // Add Songs to Category component
+        const AddSongsToCategoryView = () => {
+          const [selectedSongIds, setSelectedSongIds] = useState([]);
+          
+          const handleSongSelection = (songId) => {
+            setSelectedSongIds(prev => 
+              prev.includes(songId) 
+                ? prev.filter(id => id !== songId)
+                : [...prev, songId]
+            );
+          };
+          
+          const handleAddSelectedSongs = () => {
+            if (selectedSongIds.length > 0) {
+              addSongToCategory(selectedSongIds, selectedCategory.id)
+                .then(() => {
+                  loadCategoryDetails(selectedCategory.id);
+                  setSelectedSongIds([]);
+                });
+            }
+          };
+          
+          // Filter songs to show only those not already in the category
+          const availableSongs = songs.filter(song => 
+            !selectedCategory.songs?.some(catSong => catSong.id === song.id)
+          );
+          
+          return (
+            <div className="selection-view">
+              <h2>Add Songs to {selectedCategory?.name}</h2>
+              <div className="song-selection-container">
+                {availableSongs.length === 0 ? (
+                  <p>All available songs are already in this category.</p>
+                ) : (
+                  <>
+                    <ul className="selection-list">
+                      {availableSongs.map(song => (
+                        <li key={song.id} className="song-selection-item">
+                          <div className="song-checkbox">
+                            <input
+                              type="checkbox"
+                              id={`sel-song-${song.id}`}
+                              checked={selectedSongIds.includes(song.id)}
+                              onChange={() => handleSongSelection(song.id)}
+                            />
+                            <label htmlFor={`sel-song-${song.id}`}>
+                              {song.title} by {song.artist}
+                            </label>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    
+                    <div className="selection-actions">
+                      <button 
+                        className="add-selected-button"
+                        onClick={handleAddSelectedSongs}
+                        disabled={selectedSongIds.length === 0}
+                      >
+                        Add Selected Songs ({selectedSongIds.length})
+                      </button>
+                      <button 
+                        className="cancel-button"
+                        onClick={() => {
+                          loadCategoryDetails(selectedCategory.id);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        };
+        
+        return <AddSongsToCategoryView />;
+      }
       case 'add-song':
         return <AddSongForm onSuccess={handleAddSongSuccess} onCancel={() => setView('dashboard')} />;
       case 'add-category':
@@ -528,62 +640,6 @@ const deleteSong = async (songId) => {
         {renderView()}
       </div>
       
-      {showAddSongPanel && selectedCategoryForSongs && (
-        <div className="add-songs-panel">
-          <div className="panel-header">
-            <h3>Add Songs to Category</h3>
-            <button className="close-button" onClick={() => setShowAddSongPanel(false)}>×</button>
-          </div>
-          <div className="search-bar">
-            <input 
-              type="text" 
-              placeholder="Search songs by title or artist..." 
-              id="song-search"
-              onChange={(e) => {
-                // We'll handle the search in real-time here
-                setSearchQuery(e.target.value);
-              }}
-            />
-          </div>
-          <div className="available-songs">
-            {filteredSongs.length > 0 ? (
-              <>
-                <ul id="available-songs-list" className="selection-list">
-                  {filteredSongs.map(song => (
-                    <li key={song.id} className="available-song-item">
-                      <div className="db-song-info">
-                        <span className="db-song-title">{song.title}</span>
-                        <span className="db-song-artist">by {song.artist}</span>
-                      </div>
-                      <button 
-                        className="add-button"
-                        onClick={async () => {
-                          const success = await addSongToCategory(song.id, selectedCategoryForSongs);
-                          if (success) {
-                            // Refresh the songs list by getting the updated category
-                            if (view === 'category-details' && selectedCategory) {
-                              loadCategoryDetails(selectedCategory.id);
-                            } else {
-                              fetchCategories();
-                            }
-                          }
-                        }}
-                      >
-                        Add
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <p id="no-songs-message" className="no-songs-available" style={{ display: 'none' }}>
-                  No matching songs found
-                </p>
-              </>
-            ) : (
-              <p className="no-songs-available">Loading songs...</p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

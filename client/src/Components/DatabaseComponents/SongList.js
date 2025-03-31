@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import './DatabaseList.css';
 import './SongList.css';
 
 const SongList = ({ 
@@ -151,21 +152,21 @@ const SongList = ({
   };
 
   return (
-    <div className="songs-view">
+    <div className="songs-view db-list-view">
       <h2>Songs</h2>
       
       {/* Add song search box */}
-      <div className="song-search-container">
+      <div className="db-search-container">
         <input
           type="text"
           placeholder="Search songs by title or artist..."
           value={songSearchQuery}
           onChange={(e) => setSongSearchQuery(e.target.value)}
-          className="song-search-input"
+          className="db-search-input"
         />
         {songSearchQuery && (
           <button 
-            className="clear-search-button"
+            className="db-clear-search-button"
             onClick={() => setSongSearchQuery('')}
           >
             ×
@@ -176,32 +177,32 @@ const SongList = ({
       {loading ? (
         <p>Loading songs...</p>
       ) : (
-        <div className="songs-list">
+        <div className="songs-list db-items-list">
           {filteredSongs.length > 0 ? (
             filteredSongs.map(song => (
-              <div key={song.id} className="song-card">
-                <div className="song-header">
-                  <h3 onClick={() => handleExpandSong(song.id)} className="song-title">
+              <div key={song.id} className="song-card db-item-card">
+                <div className="song-header db-item-header">
+                  <h3 onClick={() => handleExpandSong(song.id)} className="song-title db-item-title">
                     {song.title}
-                    <span className="artist-name">
+                    <span className="artist-name db-item-subtitle">
                       by {song.artist}
                     </span>
-                    <span className="categories-count">
+                    <span className="categories-count db-item-count">
                       ({song.categories ? song.categories.length : 0} categories)
                     </span>
-                    <span className="expand-icon">
+                    <span className="db-expand-icon">
                       {expandedSongs[song.id] ? '▼' : '►'}
                     </span>
                   </h3>
-                  <div className="song-actions">
+                  <div className="song-actions db-item-actions">
                     <button 
-                      className="add-button"
+                      className="db-add-button"
                       onClick={() => handleAddCategories(song.id)}
                     >
                       Add Categories
                     </button>
                     <button 
-                      className="view-button" 
+                      className="db-view-button" 
                       onClick={() => onSelectSong(song.id)}
                     >
                       View Details
@@ -210,16 +211,16 @@ const SongList = ({
                 </div>
                 
                 {expandedSongs[song.id] && (
-                  <div className="song-details">
+                  <div className="song-details db-item-details">
                     {song.categories && song.categories.length > 0 ? (
                       <div className="song-categories-list">
                         <h4>Categories:</h4>
-                        <ul className="categories-list">
+                        <ul className="categories-list db-sublist">
                           {song.categories.map(category => (
-                            <li key={category.id} className="category-item">
+                            <li key={category.id} className="category-item db-subitem">
                               {category.name}
                               <button 
-                                className="remove-button"
+                                className="db-remove-button"
                                 onClick={() => handleRemoveCategory(song.id, category.id)}
                               >
                                 Remove
@@ -229,14 +230,14 @@ const SongList = ({
                         </ul>
                       </div>
                     ) : (
-                      <p className="no-categories-message">No categories assigned to this song</p>
+                      <p className="db-no-items-message">No categories assigned to this song</p>
                     )}
                   </div>
                 )}
               </div>
             ))
           ) : (
-            <p className="no-items-message">
+            <p className="db-no-items-message">
               {songSearchQuery 
                 ? `No songs found matching "${songSearchQuery}"`
                 : "No songs found. Add songs to get started."}
@@ -246,12 +247,12 @@ const SongList = ({
       )}
 
       {showAddCategoryPanel && selectedSongForCategories && (
-        <div className="add-categories-panel">
-          <div className="panel-header">
+        <div className="add-categories-panel db-add-panel">
+          <div className="panel-header db-panel-header">
             <h3>Add Categories to Song</h3>
-            <button className="close-button" onClick={() => setShowAddCategoryPanel(false)}>×</button>
+            <button className="close-button db-close-button" onClick={() => setShowAddCategoryPanel(false)}>×</button>
           </div>
-          <div className="search-bar">
+          <div className="search-bar db-search-bar">
             <input 
               type="text" 
               placeholder="Search categories by name..." 
@@ -260,13 +261,23 @@ const SongList = ({
               onChange={(e) => setCategorySearchQuery(e.target.value)}
             />
           </div>
-          <div className="available-categories">
+          <div className="categories-actions db-selection-actions">
+                  <button 
+                    className="add-selected-button db-add-selected-button"
+                    onClick={handleAddSelectedCategories}
+                    disabled={selectedCategories.length === 0}
+                  >
+                    Add Selected Categories ({selectedCategories.length})
+                  </button>
+                </div>            
+          <div className="available-categories db-available-items">
             {filteredCategories.length > 0 ? (
               <>
-                <ul id="available-categories-list" className="selection-list">
+            
+                <ul id="available-categories-list" className="selection-list db-selection-list">
                   {filteredCategories.map(category => (
-                    <li key={category.id} className="available-category-item">
-                      <div className="category-checkbox">
+                    <li key={category.id} className="available-category-item db-selection-item">
+                      <div className="category-checkbox db-checkbox">
                         <input
                           type="checkbox"
                           id={`category-${category.id}`}
@@ -280,20 +291,11 @@ const SongList = ({
                     </li>
                   ))}
                 </ul>
-                <div className="categories-actions">
-                  <button 
-                    className="add-selected-button"
-                    onClick={handleAddSelectedCategories}
-                    disabled={selectedCategories.length === 0}
-                  >
-                    Add Selected Categories ({selectedCategories.length})
-                  </button>
-                </div>
               </>
             ) : categorySearchQuery ? (
-              <p className="no-categories-available">No matching categories found</p>
+              <p className="db-no-items-available">No matching categories found</p>
             ) : (
-              <p className="no-categories-available">Loading categories...</p>
+              <p className="db-no-items-available">Loading categories...</p>
             )}
           </div>
         </div>

@@ -1,0 +1,310 @@
+/* Common styles for database list components (SongList and CategoryList) */
+
+/* List container styles */
+.db-list-view {
+  position: relative;
+  width: 100%;
+}
+
+/* Search container styles */
+.db-search-container {
+  display: flex;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.db-search-input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.db-search-input:focus {
+  border-color: #0d6efd;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.db-clear-search-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.db-clear-search-button:hover {
+  color: #dc3545;
+}
+
+/* Item list styles */
+.db-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.db-item-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+}
+
+.db-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.db-item-title {
+  margin: 0;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.db-item-subtitle {
+  margin-left: 10px;
+  font-weight: normal;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.db-item-count {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: normal;
+}
+
+.db-expand-icon {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.db-item-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Button styles */
+.db-view-button {
+  padding: 8px 12px;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.db-view-button:hover {
+  background-color: #0b5ed7;
+}
+
+.db-add-button {
+  padding: 8px 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.db-add-button:hover {
+  background-color: #218838;
+}
+
+.db-remove-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.db-remove-button:hover {
+  background-color: #c82333;
+}
+
+/* Details section */
+.db-item-details {
+  padding: 15px;
+  background-color: #fff;
+  border-top: 1px solid #eee;
+}
+
+.db-sublist {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.db-subitem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.db-subitem-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-subitem-title {
+  font-weight: 500;
+}
+
+.db-subitem-subtitle {
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+/* Message styles */
+.db-no-items-message {
+  text-align: center;
+  color: #6c757d;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Panel styles for adding items */
+.db-add-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  max-width: 600px;
+  max-height: 80vh;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.db-panel-header h3 {
+  margin: 0;
+}
+
+.db-close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #555;
+}
+
+.db-search-bar {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.db-search-bar input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.db-available-items {
+  padding: 0 20px;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.db-selection-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 15px 0;
+}
+
+.db-selection-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.db-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.db-checkbox input[type="checkbox"] {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.db-checkbox label {
+  flex: 1;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.db-selection-actions {
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+}
+
+.db-add-selected-button {
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.db-add-selected-button:hover {
+  background-color: #3e8e41;
+}
+
+.db-add-selected-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.db-no-items-available {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+}
