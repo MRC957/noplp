@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import './AddSongForm.css';
 
 const AddSongForm = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,8 @@ const AddSongForm = ({ onSuccess, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
+  const [addedSong, setAddedSong] = useState(null); // Store the successfully added song
+  const [songAlreadyExists, setSongAlreadyExists] = useState(false); // Flag for existing songs
 
   const handleChange = (e) => {
     setFormData({
@@ -30,6 +33,7 @@ const AddSongForm = ({ onSuccess, onCancel }) => {
     setSubmitting(true);
     setError(null);
     setStatusMessage(null);
+    setSongAlreadyExists(false);
 
     try {
       let response;
@@ -62,7 +66,14 @@ const AddSongForm = ({ onSuccess, onCancel }) => {
       
       setSubmitting(false);
       if (response.data) {
-        onSuccess(response.data);
+        // Check if the song already existed
+        if (response.data.already_exists) {
+          setSongAlreadyExists(true);
+          setStatusMessage(`"${response.data.title}" by ${response.data.artist} already exists in the database. Any existing category associations have been preserved.`);
+        } else {
+          setStatusMessage(`Successfully added "${response.data.title}" by ${response.data.artist}`);
+        }
+        setAddedSong(response.data);
       }
     } catch (err) {
       setSubmitting(false);
@@ -71,6 +82,58 @@ const AddSongForm = ({ onSuccess, onCancel }) => {
       console.error(err);
     }
   };
+
+  // When the user clicks to continue to add categories
+  const handleContinueToCategories = () => {
+    if (addedSong) {
+      onSuccess(addedSong, true); // Pass true to indicate we want to add categories
+    }
+  };
+
+  // When the user clicks to skip category assignment
+  const handleSkipCategories = () => {
+    if (addedSong) {
+      onSuccess(addedSong, false, true); // Pass true as third parameter to go to song list
+    }
+  };
+
+  // Reset form to add another song
+  const handleAddAnother = () => {
+    setFormData({
+      title: '',
+      artist: '',
+      track_id: ''
+    });
+    setAddedSong(null);
+    setStatusMessage(null);
+    setError(null);
+    setSongAlreadyExists(false);
+  };
+
+  // If a song has been successfully added, show the success screen with options
+  if (addedSong) {
+    return (
+      <div className="add-form">
+        <h2>{songAlreadyExists ? 'Song Already Exists' : 'Song Added Successfully!'}</h2>
+        <div className={songAlreadyExists ? "info-message" : "success-message"}>
+          <p>"{addedSong.title}" by {addedSong.artist} {songAlreadyExists ? 'is already in the database.' : 'has been added to the database.'}</p>
+          {songAlreadyExists && <p>Any existing category associations have been preserved.</p>}
+          <p>What would you like to do next?</p>
+        </div>
+        <div className="form-actions">
+          <button onClick={handleContinueToCategories} className="primary-button">
+            {songAlreadyExists ? 'Manage Categories' : 'Add to Categories'}
+          </button>
+          <button onClick={handleAddAnother} className="secondary-button">
+            Add Another Song
+          </button>
+          <button onClick={handleSkipCategories} className="tertiary-button">
+            Go to Song List
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="add-form">

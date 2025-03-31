@@ -1,0 +1,159 @@
+.add-form {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.add-form h2 {
+  margin-bottom: 20px;
+  color: #333;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.method-selector {
+  margin-bottom: 20px;
+}
+
+.method-options {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.method-button {
+  padding: 10px 15px;
+  background-color: #f1f1f1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  transition: all 0.2s ease;
+}
+
+.method-button.active {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+.status-message {
+  padding: 10px;
+  background-color: #e8f4fe;
+  border-left: 4px solid #0d6efd;
+  margin-bottom: 15px;
+  color: #0a58ca;
+}
+
+.error-message {
+  padding: 10px;
+  background-color: #ffeaea;
+  border-left: 4px solid #dc3545;
+  margin-bottom: 15px;
+  color: #dc3545;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+  gap: 10px;
+}
+
+.form-actions button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.form-actions button[type="submit"], .primary-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.form-actions button[type="submit"]:hover, .primary-button:hover {
+  background-color: #218838;
+}
+
+.form-actions button[type="button"], .secondary-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.form-actions button[type="button"]:hover, .secondary-button:hover {
+  background-color: #5a6268;
+}
+
+.tertiary-button {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.tertiary-button:hover {
+  background-color: #138496;
+}
+
+.form-actions button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 5px;
+}
+
+/* Success message styles */
+.success-message {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  color: #155724;
+  padding: 15px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Info message styles for when a song already exists */
+.info-message {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 4px;
+  color: #0c5460;
+  padding: 15px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.success-message p, .info-message p {
+  margin: 10px 0;
+}
+
+.success-message p:first-child, .info-message p:first-child {
+  font-weight: bold;
+  font-size: 1.1em;
+}

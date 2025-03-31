@@ -177,16 +177,14 @@ class DatabasePopulator:
             if not track_data or lyrics_df is None or lyrics_df.empty:
                 logger.error(f"No track or lyrics found for {track_name} by {artist}")
                 return None
-
-
             
             with self.app.app_context():
-                # track_id = track_data.get('id')
-                
-                # Create or update song
+                # Check if song already exists
                 song = Song.query.get(track_id)
+                is_new_song = song is None
                 
                 if not song:
+                    # Create new song
                     song = Song(
                         id=track_id,
                         artist=track_data.get('artists', [{}])[0].get('name', artist),
@@ -194,13 +192,16 @@ class DatabasePopulator:
                         lyrics=lyrics_df.to_dict(orient='records')
                     )
                     db.session.add(song)
+                    logger.info(f"Adding new song: {song.title} by {song.artist}")
                 else:
-                    # Update song data
-                    song.artist = track_data.get('artists', [{}])[0].get('name', artist)
-                    song.title = track_data.get('name', track_name)
-                    song.lyrics = lyrics_df.to_dict(orient='records')
+                    # Update song data while preserving existing categories
+                    logger.info(f"Song already exists: {song.title} by {song.artist}")
+                    # Only update lyrics if they don't exist
+                    if not song.lyrics:
+                        song.lyrics = lyrics_df.to_dict(orient='records')
+                        logger.info(f"Updated lyrics for existing song")
                 
-                # Add categories if specified
+                # Add new categories if specified, without removing existing ones
                 if category_ids:
                     if isinstance(category_ids, str):
                         category_ids = [category_ids]
@@ -209,10 +210,14 @@ class DatabasePopulator:
                         category = Category.query.get(cat_id)
                         if category and category not in song.categories:
                             song.categories.append(category)
+                            logger.info(f"Added category '{category.name}' to song")
                 
                 db.session.commit()
-                logger.info(f"Added song: {song.title} by {song.artist}")
-                return song.to_dict()
+                
+                result = song.to_dict()
+                result["already_exists"] = not is_new_song
+                
+                return result
                 
         except Exception as e:
             logger.exception(f"Error adding song '{track_name}' by '{artist}': {str(e)}")

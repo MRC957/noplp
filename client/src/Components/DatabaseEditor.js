@@ -187,8 +187,7 @@ const DatabaseEditor = () => {
         // Refresh data
         fetchStats();
         setView('categories');
-        await fetchCategories(); // Refresh the categories list
-        return true;
+        await fetchCategories();        return true;
       }
       return false;
     } catch (err) {
@@ -205,8 +204,7 @@ const deleteSong = async (songId) => {
             // Refresh data
             fetchStats();
             setView('songs');
-            await fetchSongs(); // Refresh the songs list
-            return true;
+            await fetchSongs();            return true;
         }
         return false;
     } catch (err) {
@@ -216,9 +214,26 @@ const deleteSong = async (songId) => {
     }
 };
 
-  const handleAddSongSuccess = () => {
-    fetchStats();
-    setView('dashboard');
+  const handleAddSongSuccess = async (songData, addToCategories = false, goToSongList = false) => {
+    // Refresh stats to reflect the new song
+    await fetchStats();
+    
+    // If the user wants to add the song to categories
+    if (addToCategories) {
+      // Set the selected song and load categories
+      setSelectedSong(songData);
+      await fetchCategories();
+      setView('add-category-to-song');
+    } 
+    // If the user wants to go to song list
+    else if (goToSongList) {
+      await fetchSongs();
+      setView('songs');
+    }
+    // Otherwise stay on add song view
+    else {
+      setView('add-song');
+    }
   };
 
   const handleAddCategorySuccess = () => {
@@ -267,8 +282,8 @@ const deleteSong = async (songId) => {
             Back to Songs
               </button>
               <button onClick={() => fetchCategories().then(cats => {
-              setView('add-category-to-song');
-            })}
+                setView('add-category-to-song');
+              })}
             className="add-button">
             Add to Category
             </button>
@@ -334,12 +349,12 @@ const deleteSong = async (songId) => {
                   } else {
                 // Fallback for string format (try to parse or display as is)
                 const parts = typeof line === 'string' && line.includes(':') 
-                  ? line.split(':', 2) 
-                  : ['-', line];
+                  ? line.split(':') 
+                  : ['--:--', line];
                 return (
                   <tr key={index}>
-                    <td>{parts[0].trim()}</td>
-                    <td>{parts[1].trim()}</td>
+                    <td>{parts[0]}</td>
+                    <td>{parts[1] || line}</td>
                   </tr>
                 );
                   }
@@ -362,12 +377,12 @@ const deleteSong = async (songId) => {
           <div className="details-view">
             <div className="details-header">
               <button 
-              onClick={() => setView('categories')}
-              className="back-button">
+                onClick={() => setView('categories')}
+                className="back-button">
                 Back to Categories
               </button>
               <button 
-                onClick={() => handleAddSongs(selectedCategory.id)} 
+                onClick={() => handleAddSongs(selectedCategory.id)}
                 className="add-button">
                 Add Songs
               </button>
@@ -375,23 +390,20 @@ const deleteSong = async (songId) => {
                 onClick={() => deleteCategory(selectedCategory.id)}
                 className="delete-button danger-button">
                 Delete Category
-              </button>  
-            </div>          
+              </button>
+            </div>
             <h2>Category Details</h2>
             {selectedCategory ? (
               <div>
                 <h3>{selectedCategory.name}</h3>
                 <p>ID: {selectedCategory.id}</p>
                 <div className="category-songs">
-                  <h4>Songs:</h4>
+                  <h3>Songs in this Category:</h3>
                   {selectedCategory.songs?.length > 0 ? (
                     <ul>
                       {selectedCategory.songs.map(song => (
                         <li key={song.id}>
-                          <div className="db-song-info">
-                            <span className="db-song-title">{song.title}</span>
-                            <span className="db-song-artist">by {song.artist}</span>
-                          </div>
+                          {song.title} by {song.artist}
                           <button 
                             onClick={() => removeSongFromCategory(song.id, selectedCategory.id)}
                             className="delete-button danger-button">
@@ -410,6 +422,7 @@ const deleteSong = async (songId) => {
             )}
           </div>
         );
+
       case 'add-category-to-song':
         return (
           <div className="selection-view">
