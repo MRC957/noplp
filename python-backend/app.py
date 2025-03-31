@@ -684,6 +684,9 @@ def get_songs_with_categories():
         with app.app_context():
             songs = Song.query.all()
             songs_data = [song.to_dict(include_categories_full=True) for song in songs]
+            # Add name field to each song
+            for song in songs_data:
+                song["name"] = f"{song['title']} by {song['artist']}"
             return jsonify(songs_data)
     except Exception as e:
         logger.exception(f"Error getting songs with categories: {str(e)}")

@@ -1,24 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import './DatabaseList.css';
 import './SongList.css';
 
 const SongList = ({ 
   onLoadSongs, 
   onSelectSong, 
-  onLoadCategories, 
-  onAddCategory, 
-  onRemoveCategory 
+  onRemoveCategory,
+  onAddCategory
 }) => {
   const [songs, setSongs] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedSongs, setExpandedSongs] = useState({});
-  const [showAddCategoryPanel, setShowAddCategoryPanel] = useState(false);
-  const [selectedSongForCategories, setSelectedSongForCategories] = useState(null);
-  const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [songSearchQuery, setSongSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([]);
   
   // Fetch songs on component mount
   useEffect(() => {
@@ -56,23 +49,7 @@ const SongList = ({
     };
   }, []); // Empty dependency array - only run on mount
 
-  // Filter categories based on search query
-  const filteredCategories = categories.filter(category => {
-    // Filter by search query
-    if (categorySearchQuery) {
-      const query = categorySearchQuery.toLowerCase();
-      if (!category.name.toLowerCase().includes(query)) return false;
-    }
-    
-    // Filter out categories already assigned to the song
-    if (selectedSongForCategories) {
-      const song = songs.find(s => s.id === selectedSongForCategories);
-      if (song && song.categories) {
-        return !song.categories.some(songCat => songCat.id === category.id);
-      }
-    }
-    return true;
-  });
+
 
   // Filter songs based on search query
   const filteredSongs = songs.filter(song => {
@@ -93,19 +70,6 @@ const SongList = ({
     }));
   };
 
-  const handleAddCategories = async (songId) => {
-    // Reset selected categories when opening the panel
-    setSelectedCategories([]);
-    
-    // Load all categories first to ensure they're available for filtering
-    const fetchedCategories = await onLoadCategories();
-    setCategories(fetchedCategories || []);
-    // Set the selected song for categories
-    setSelectedSongForCategories(songId);
-    // Show the add categories panel
-    setShowAddCategoryPanel(true);
-  };
-
   const handleRemoveCategory = async (songId, categoryId) => {
     try {
       await onRemoveCategory(songId, categoryId);
@@ -114,40 +78,6 @@ const SongList = ({
       setSongs(updatedSongs);
     } catch (error) {
       console.error("Error removing category from song:", error);
-    }
-  };
-
-  const handleCategorySelection = (categoryId) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        // Remove if already selected
-        return prev.filter(id => id !== categoryId);
-      } else {
-        // Add if not selected
-        return [...prev, categoryId];
-      }
-    });
-  };
-
-  const handleAddSelectedCategories = async () => {
-    if (selectedCategories.length === 0 || !selectedSongForCategories) return;
-    
-    try {
-      // Use axios instead of fetch
-      await axios.post(`/api/database/songs/${selectedSongForCategories}/categories`, {
-        category_ids: selectedCategories
-      });
-      
-      // Refresh songs after adding categories
-      const updatedSongs = await onLoadSongs();
-      setSongs(updatedSongs);
-      
-      // Close the panel and reset selected categories
-      setShowAddCategoryPanel(false);
-      setSelectedCategories([]);
-      
-    } catch (error) {
-      console.error("Error adding categories to song:", error);
     }
   };
 
@@ -197,7 +127,7 @@ const SongList = ({
                   <div className="song-actions db-item-actions">
                     <button 
                       className="db-add-button"
-                      onClick={() => handleAddCategories(song.id)}
+                      onClick={() => onAddCategory(song)}
                     >
                       Add Categories
                     </button>
@@ -246,60 +176,6 @@ const SongList = ({
         </div>
       )}
 
-      {showAddCategoryPanel && selectedSongForCategories && (
-        <div className="add-categories-panel db-add-panel">
-          <div className="panel-header db-panel-header">
-            <h3>Add Categories to Song</h3>
-            <button className="close-button db-close-button" onClick={() => setShowAddCategoryPanel(false)}>×</button>
-          </div>
-          <div className="search-bar db-search-bar">
-            <input 
-              type="text" 
-              placeholder="Search categories by name..." 
-              id="category-search"
-              value={categorySearchQuery}
-              onChange={(e) => setCategorySearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="categories-actions db-selection-actions">
-                  <button 
-                    className="add-selected-button db-add-selected-button"
-                    onClick={handleAddSelectedCategories}
-                    disabled={selectedCategories.length === 0}
-                  >
-                    Add Selected Categories ({selectedCategories.length})
-                  </button>
-                </div>            
-          <div className="available-categories db-available-items">
-            {filteredCategories.length > 0 ? (
-              <>
-            
-                <ul id="available-categories-list" className="selection-list db-selection-list">
-                  {filteredCategories.map(category => (
-                    <li key={category.id} className="available-category-item db-selection-item">
-                      <div className="category-checkbox db-checkbox">
-                        <input
-                          type="checkbox"
-                          id={`category-${category.id}`}
-                          checked={selectedCategories.includes(category.id)}
-                          onChange={() => handleCategorySelection(category.id)}
-                        />
-                        <label htmlFor={`category-${category.id}`} className="db-category-name">
-                          {category.name}
-                        </label>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : categorySearchQuery ? (
-              <p className="db-no-items-available">No matching categories found</p>
-            ) : (
-              <p className="db-no-items-available">Loading categories...</p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
