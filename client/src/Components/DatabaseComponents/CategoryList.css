@@ -64,10 +64,7 @@
   color: #0069d9;
 }
 
-.add-song-button {
-  background-color: #28a745;
-  color: white;
-}
+
 
 .category-songs {
   padding: 15px;
@@ -205,15 +202,7 @@
   background-color: #fafafa;
 }
 
-.add-button {
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 10px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
+
 
 .no-songs-available {
   text-align: center;

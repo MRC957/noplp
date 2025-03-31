@@ -7,7 +7,8 @@ const CategoryList = ({
   onLoadSongs, 
   onAddSong, 
   onRemoveSong,
-  onAddSongs
+  onAddSongs,
+  onDeleteCategory
 }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,17 @@ const CategoryList = ({
     }
   };
 
+  const handleDeleteCategory = async (categoryId, event) => {
+    // Stop propagation to prevent the view details action from triggering
+    event.stopPropagation();
+    try {
+      await onDeleteCategory(categoryId);
+      // Categories will be refreshed by the parent component after successful deletion
+    } catch (error) {
+      console.error("Error deleting category:", error);
+    }
+  };
+
   return (
     <div className="categories-view">
       <h2>Categories</h2>
@@ -99,7 +111,7 @@ const CategoryList = ({
                   <button className="view-button" onClick={() => onSelectCategory(category.id)}>
                     View Details
                   </button>
-                  <button className="add-song-button" onClick={() => handleAddSongs(category.id)}>
+                  <button className="add-button" onClick={() => handleAddSongs(category.id)}>
                     Add Songs
                   </button>
                 </div>

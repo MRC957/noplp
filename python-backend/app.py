@@ -541,6 +541,30 @@ def remove_song_from_category(song_id, category_id):
         logger.exception(f"Error removing song from category: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# Add endpoint to delete a category
+@app.route('/api/database/categories/<category_id>', methods=['DELETE'])
+def delete_category(category_id):
+    try:
+        with app.app_context():
+            # Find the category
+            category = Category.query.get(category_id)
+            
+            if not category:
+                return jsonify({"error": f"Category with ID {category_id} not found"}), 404
+                
+            # Remove associations with songs but keep the songs
+            category.songs = []
+                
+            # Delete the category
+            db.session.delete(category)
+            db.session.commit()
+            
+            return jsonify({"message": f"Category '{category.name}' deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error deleting category: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 # Add endpoint to get all categories with their songs
 @app.route('/api/database/categories-with-songs', methods=['GET'])
 def get_categories_with_songs():

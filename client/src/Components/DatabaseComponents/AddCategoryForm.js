@@ -3,8 +3,7 @@ import axios from 'axios';
 
 const AddCategoryForm = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    difficulty: 'medium'
+    name: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -49,19 +48,6 @@ const AddCategoryForm = ({ onSuccess, onCancel }) => {
             onChange={handleChange}
             required
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="difficulty">Difficulty Level</label>
-          <select
-            id="difficulty"
-            name="difficulty"
-            value={formData.difficulty}
-            onChange={handleChange}
-          >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
         </div>
         <div className="form-actions">
           <button type="submit" disabled={submitting}>

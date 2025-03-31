@@ -181,6 +181,24 @@ const DatabaseEditor = () => {
     }
   };
 
+  const deleteCategory = async (categoryId) => {
+    try {
+      if (window.confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+        await axios.delete(`/api/database/categories/${categoryId}`);
+        // Refresh data
+        fetchStats();
+        setView('categories');
+        await fetchCategories(); // Refresh the categories list
+        return true;
+      }
+      return false;
+    } catch (err) {
+      setError('Failed to delete category');
+      console.error(err);
+      return false;
+    }
+  };
+
   const handleAddSongSuccess = () => {
     fetchStats();
     setView('dashboard');
@@ -221,6 +239,7 @@ const DatabaseEditor = () => {
             onAddSong={addSongToCategory}
             onRemoveSong={removeSongFromCategory}
             onAddSongs={handleAddSongs}
+            onDeleteCategory={deleteCategory} // Pass deleteCategory function
           />
         );
       case 'song-details':
@@ -269,12 +288,23 @@ const DatabaseEditor = () => {
       case 'category-details':
         return (
           <div className="details-view">
-            <button onClick={() => setView('categories')}>Back to Categories</button>
-            <button 
-                  onClick={() => handleAddSongs(selectedCategory.id)} 
-                  className="add-song-button">
-                  Add Songs
-                </button>            
+            <div className="details-header">
+              <button 
+              onClick={() => setView('categories')}
+              className="back-button">
+                Back to Categories
+              </button>
+              <button 
+                onClick={() => handleAddSongs(selectedCategory.id)} 
+                className="add-button">
+                Add Songs
+              </button>
+              <button 
+                onClick={() => deleteCategory(selectedCategory.id)}
+                className="delete-button danger-button">
+                Delete Category
+              </button>  
+            </div>          
             <h2>Category Details</h2>
             {selectedCategory ? (
               <div>
@@ -290,7 +320,9 @@ const DatabaseEditor = () => {
                             <span className="db-song-title">{song.title}</span>
                             <span className="db-song-artist">by {song.artist}</span>
                           </div>
-                          <button onClick={() => removeSongFromCategory(song.id, selectedCategory.id)}>
+                          <button 
+                            onClick={() => removeSongFromCategory(song.id, selectedCategory.id)}
+                            className="delete-button danger-button">
                             Remove
                           </button>
                         </li>
