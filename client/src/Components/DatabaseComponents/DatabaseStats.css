@@ -102,3 +102,62 @@
 .db-category-list::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+.db-artist-stats {
+  margin-top: 30px;
+  background-color: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.db-artist-list {
+  max-height: 400px; /* Limit height for scrolling */
+  overflow-y: auto; /* Enable scrolling for long artist lists */
+  padding-right: 5px;
+}
+
+.db-artist-stats h3 {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+  position: sticky;
+  top: 0;
+  background-color: #f5f5f5;
+  z-index: 1;
+}
+
+.db-artist-stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.db-artist-stat-item:last-child {
+  border-bottom: none;
+}
+
+.db-artist-stat-item span:last-child {
+  font-weight: bold;
+  color: #2196F3;
+}
+
+/* Add scrollbar styling for better appearance */
+.db-artist-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.db-artist-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.db-artist-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.db-artist-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

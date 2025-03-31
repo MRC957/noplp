@@ -21,11 +21,12 @@ const DatabaseStats = ({ stats, onRefresh }) => {
         </div>
         
         <div className="db-stat-card">
-          <h3>Songs with Lyrics</h3>
-          <div className="db-stat-value">{stats.songsWithLyrics || 0}</div>
+          <h3>Total artists</h3>
+          <div className="db-stat-value">{stats.totalArtists || 0}</div>
         </div>
       </div>
       
+      {/* Songs per Category Section */}
       {stats.categories && (
         <div className="db-category-stats">
           <h3>Songs per Category</h3>
@@ -34,6 +35,21 @@ const DatabaseStats = ({ stats, onRefresh }) => {
               <div key={cat.id} className="db-category-stat-item">
                 <span>{cat.name}</span>
                 <span>{cat.song_count} songs</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Songs by Artist Section */}
+      {stats.artists && (
+        <div className="db-artist-stats">
+          <h3>Songs by Artist</h3>
+          <div className="db-artist-list">
+            {stats.artists.map((artist, index) => (
+              <div key={index} className="db-artist-stat-item">
+                <span>{artist.artist}</span>
+                <span>{artist.song_count} songs</span>
               </div>
             ))}
           </div>

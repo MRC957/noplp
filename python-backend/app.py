@@ -429,7 +429,7 @@ def get_database_stats():
         with app.app_context():
             song_count = Song.query.count()
             category_count = Category.query.count()
-            lyrics_count = sum(1 for song in Song.query.all() if song.lyrics)
+            # lyrics_count = sum(1 for song in Song.query.all() if song.lyrics)
             
             # Get count of songs per category
             categories = Category.query.all()
@@ -444,11 +444,26 @@ def get_database_stats():
                     'song_count': len(category.songs)
                 })
             
+            # Get count of songs by artist using GROUP BY
+            artist_stats = db.session.query(
+                Song.artist,
+                db.func.count(Song.id).label('song_count')
+            ).group_by(Song.artist).order_by(db.func.count(Song.id).desc()).all()
+            
+            artist_stats_list = [
+                {'artist': artist, 'song_count': count}
+                for artist, count in artist_stats
+            ]
+            
+            artists_count = len(artist_stats_list)
+
             return jsonify({
                 'totalSongs': song_count,
                 'totalCategories': category_count,
-                'songsWithLyrics': lyrics_count,
-                'categories': category_stats
+                'totalArtists': artists_count,
+                # 'songsWithLyrics': lyrics_count,
+                'categories': category_stats,
+                'artists': artist_stats_list
             }), 200
     except Exception as e:
         logger.exception(f"Error getting database stats: {str(e)}")
