@@ -57,11 +57,16 @@ class Category(db.Model):
     def __repr__(self):
         return f"<Category {self.name}>"
     
-    def to_dict(self):
-        return {
+    def to_dict(self, include_songs=False):
+        result = {
             'id': self.id,
             'name': self.name
         }
+        
+        if include_songs:
+            result['songs'] = [song.to_dict() for song in self.songs]
+            
+        return result
 
 def init_db(app):
     """Initialize the database with the Flask app"""
