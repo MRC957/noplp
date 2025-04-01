@@ -242,6 +242,25 @@ const DatabaseEditor = () => {
     }
   };
 
+  // Category renaming function
+  const renameCategory = async (categoryId, newName) => {
+    try {
+      const response = await axios.put(`/api/database/categories/${categoryId}`, {
+        name: newName
+      });
+      
+      // Refresh data after successful update
+      fetchStats();
+      
+      // Return the updated category
+      return response.data.category;
+    } catch (err) {
+      setError(`Failed to rename category: ${err.response?.data?.error || err.message}`);
+      console.error(err);
+      return null;
+    }
+  };
+
   // Navigation handlers
   const handleBackToSongsList = () => {
     setView(VIEW.SONGS_LIST);
@@ -337,6 +356,7 @@ const DatabaseEditor = () => {
             onAddSongs={handleShowAddSongsToCategory}
             onDelete={() => deleteCategory(selectedCategory.id)}
             onRemoveSong={removeSongFromCategory}
+            onRename={renameCategory}
           />
         );
         

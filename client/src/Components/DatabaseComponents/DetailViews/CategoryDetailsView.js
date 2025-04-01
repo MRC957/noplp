@@ -10,7 +10,8 @@ const CategoryDetailsView = ({
   onBack, 
   onAddSongs, 
   onDelete, 
-  onRemoveSong 
+  onRemoveSong,
+  onRename
 }) => {
   // Local state to track the current category with refreshed songs
   const [currentCategory, setCurrentCategory] = useState(category);
@@ -18,10 +19,15 @@ const CategoryDetailsView = ({
   const [removingSongIds, setRemovingSongIds] = useState([]);
   // State to track if we're currently refreshing data
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // State for category rename functionality
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [renameError, setRenameError] = useState('');
   
   // Update local state when parent category prop changes
   useEffect(() => {
     setCurrentCategory(category);
+    setNewCategoryName(category?.name || '');
   }, [category]);
   
   // Handle song removal with optimistic UI update and refresh
@@ -56,12 +62,50 @@ const CategoryDetailsView = ({
     // Pass the current category to the add songs function
     onAddSongs(currentCategory);
   };
+
+  const handleStartRename = () => {
+    setIsRenaming(true);
+    setNewCategoryName(currentCategory.name);
+    setRenameError('');
+  };
+
+  const handleCancelRename = () => {
+    setIsRenaming(false);
+    setRenameError('');
+  };
+
+  const handleSubmitRename = async () => {
+    if (!newCategoryName.trim()) {
+      setRenameError('Category name cannot be empty');
+      return;
+    }
+
+    try {
+      const updatedCategory = await onRename(currentCategory.id, newCategoryName);
+      if (updatedCategory) {
+        // Update local state with the new name
+        setCurrentCategory({
+          ...currentCategory,
+          name: updatedCategory.name
+        });
+        setIsRenaming(false);
+      }
+    } catch (error) {
+      setRenameError('Failed to rename category');
+      console.error('Rename error:', error);
+    }
+  };
   
   const headerActions = [
     {
       label: 'Add Songs',
       onClick: handleAddSongs,
       className: 'add-button'
+    },
+    {
+      label: 'Rename',
+      onClick: handleStartRename,
+      className: 'edit-button'
     },
     {
       label: 'Delete Category',
@@ -82,7 +126,30 @@ const CategoryDetailsView = ({
       <h2>Category Details</h2>
       {currentCategory ? (
         <div>
-          <h3>{currentCategory.name}</h3>
+          {isRenaming ? (
+            <div className="rename-form">
+              <h3>Rename Category</h3>
+              {renameError && <p className="error-message">{renameError}</p>}
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="form-input"
+                placeholder="New category name"
+                autoFocus
+              />
+              <div className="form-actions">
+                <button onClick={handleSubmitRename} className="save-button">
+                  Save
+                </button>
+                <button onClick={handleCancelRename} className="cancel-button">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <h3>{currentCategory.name}</h3>
+          )}
           <p>ID: {currentCategory.id}</p>
           <div className="category-songs">
             <h3>Songs in this Category:</h3>

@@ -482,6 +482,37 @@ def get_database_stats():
         logger.exception(f"Error getting database stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/database/categories/<category_id>', methods=['PUT'])
+def put_category_details(category_id):
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        with app.app_context():
+            # Find the category by ID
+            category = Category.query.get(category_id)
+            
+            if not category:
+                return jsonify({"error": f"Category with ID {category_id} not found"}), 404
+            
+            # Update category details
+            if 'name' in data:
+                category.name = data['name']
+            
+            # Save changes to database
+            db.session.commit()
+                
+            # Return updated category details
+            return jsonify({
+                "message": "Category updated successfully",
+                "category": category.to_dict(include_songs=True)
+            }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error updating category details: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/database/categories/<category_id>', methods=['GET'])
 def get_category_details(category_id):
     try:
