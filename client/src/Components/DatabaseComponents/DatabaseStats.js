@@ -24,6 +24,16 @@ const DatabaseStats = ({ stats, onRefresh }) => {
           <h3>Total artists</h3>
           <div className="db-stat-value">{stats.totalArtists || 0}</div>
         </div>
+        
+        <div className="db-stat-card">
+          <h3>Uncategorized Songs</h3>
+          <div className="db-stat-value">{stats.songsWithoutCategories || 0}</div>
+        </div>
+        
+        <div className="db-stat-card">
+          <h3>Songs with ≤1 Category</h3>
+          <div className="db-stat-value">{stats.songsWithOneOrLessCategories || 0}</div>
+        </div>
       </div>
       
       {/* Songs per Category Section */}

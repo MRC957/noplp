@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import uuid
 from spotify import SpotifyDriver, SpotifyLyricsDriver
-from database import init_db, db, Song, Category
+from database import init_db, db, Song, Category, song_category
 from db_populator import DatabasePopulator
 import logging
 from dotenv import load_dotenv
@@ -456,11 +456,24 @@ def get_database_stats():
             ]
             
             artists_count = len(artist_stats_list)
+            
+            # Count songs with no categories
+            songs_without_categories_count = db.session.query(Song).filter(~Song.categories.any()).count()
+            
+            # Count songs with at most one category (0 or 1)
+            # This combines songs with no categories and songs with exactly one category
+            songs_with_one_or_less_categories = db.session.query(Song).join(
+                song_category, Song.id == song_category.c.song_id, isouter=True
+            ).group_by(Song.id).having(
+                db.func.count(song_category.c.category_id) <= 1
+            ).count()
 
             return jsonify({
                 'totalSongs': song_count,
                 'totalCategories': category_count,
                 'totalArtists': artists_count,
+                'songsWithoutCategories': songs_without_categories_count,
+                'songsWithOneOrLessCategories': songs_with_one_or_less_categories,
                 # 'songsWithLyrics': lyrics_count,
                 'categories': category_stats,
                 'artists': artist_stats_list

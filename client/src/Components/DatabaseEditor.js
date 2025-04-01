@@ -293,7 +293,7 @@ const DatabaseEditor = () => {
   const handleAddCategorySuccess = async () => {
     await fetchStats();
     await fetchCategories();
-    setView(VIEW.CATEGORIES_LIST);
+    // setView(VIEW.CATEGORIES_LIST);
   };
 
   const renderView = () => {

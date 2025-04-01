@@ -10,7 +10,7 @@ from groq import Groq
 from tqdm import tqdm
 import re
 import random
-from slugify import slugify
+from uuid import uuid4
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -41,7 +41,9 @@ class SongCategorizer:
         self.client = Groq(
             api_key=os.getenv('GROQ_API_KEY'),
         )
-        self.model = "llama-3.3-70b-versatile"  # Using the most capable model
+        # self.model = "llama-3.3-70b-versatile"  # Using the most capable model
+        # self.model = "llama-3.1-8b-instant"  # Using the most capable model
+        self.model = "deepseek-r1-distill-llama-70b"  # Using the most capable model
         # Track newly created categories during the session
         self.new_categories = []
     
@@ -62,8 +64,9 @@ class SongCategorizer:
             'id': song.id,
             'artist': song.artist,
             'title': song.title,
-            'release_year': song.release_year,
-            'has_lyrics': bool(song.lyrics)
+            'lyrics' : " ".join([lyric.get("words") for lyric in song.lyrics])[:800] if song.lyrics else "",
+            # 'release_year': song.release_year,
+            # 'has_lyrics': bool(song.lyrics)
         }
     
     def format_existing_categories(self, categories):
@@ -103,14 +106,14 @@ class SongCategorizer:
         prompt = f"""Tu es un expert en musique française et en karaoké. Analyse ces chansons et crée ou réutilise des catégories pertinentes en français.
         
 Chansons à catégoriser:
-{json.dumps(songs_data, indent=2)}
+{json.dumps(songs_data)}
 
 """
         # Add existing categories to the prompt if available
         if existing_categories and len(existing_categories) > 0:
             prompt += f"""
 Catégories existantes que tu peux réutiliser:
-{json.dumps(existing_categories, indent=2)}
+{json.dumps(existing_categories)}
 """
 
         prompt += f"""
@@ -188,10 +191,9 @@ Catégories existantes que tu peux réutiliser:
             categories_reused = 0
             associations_created = 0
             
-            for category_info in tqdm(categories_data, desc="Processing categories"):
+            for category_info in categories_data:
                 # Check if this is a new or existing category
-                is_new = category_info.get('is_new', False)
-                category_id = category_info.get('category_id') or slugify(category_info['category_name'])
+                category_id = category_info.get('category_id')
                 
                 # Check if category already exists in database
                 category = Category.query.get(category_id)
@@ -255,7 +257,7 @@ Catégories existantes que tu peux réutiliser:
                 
                 categories_data.append({
                     "category_name": theme,
-                    "category_id": slugify(theme),
+                    "category_id": str(uuid4()),
                     "song_ids": [song.id for song in selected_songs],
                     "is_new": True
                 })
@@ -296,7 +298,7 @@ Catégories existantes que tu peux réutiliser:
                     logger.info(f"New categories created: {result['categories_created']}")
                     logger.info(f"Categories reused: {result['categories_reused']}")
                     logger.info(f"Song associations created: {result['associations_created']}")
-                    
+
             # Final summary
             logger.info(f"Categorization completed with {len(self.new_categories)} new categories created")
             for cat in self.new_categories:
