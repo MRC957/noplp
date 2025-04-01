@@ -579,6 +579,35 @@ def add_categories_to_song(song_id):
         logger.exception(f"Error adding categories to song: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/database/songs/<song_id>/lyrics', methods=['PUT'])
+def add_lyrics_to_song(song_id):
+    try:
+        data = request.json
+        if not data or 'lyrics' not in data:
+            return jsonify({"error": "Lyrics data is required"}), 400
+            
+        lyrics = data['lyrics']
+        
+        with app.app_context():
+            # Find the song by ID
+            song = Song.query.get(song_id)
+            
+            if not song:
+                return jsonify({"error": f"Song with ID {song_id} not found"}), 404
+                
+            # Update the lyrics
+            song.lyrics = lyrics
+            db.session.commit()
+            
+            return jsonify({
+                "message": f"Lyrics for song '{song.title}' updated successfully",
+                "song": song.to_dict(include_categories_full=True)
+            }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error updating lyrics for song: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/database/songs/<song_id>/categories/<category_id>', methods=['DELETE'])
 def remove_song_from_category(song_id, category_id):
     try:

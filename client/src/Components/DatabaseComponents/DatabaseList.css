@@ -11,6 +11,7 @@
   display: flex;
   margin-bottom: 20px;
   position: relative;
+  width: 90%;
 }
 
 .db-search-input {
