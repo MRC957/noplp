@@ -3,11 +3,47 @@ import json
 import logging
 import uuid
 import pandas as pd
+from tqdm import tqdm
 from spotify import SpotifyDriver, SpotifyLyricsDriver
-from song_populator import LrcLibDriver
+
 from database import db, Song, Category
 
 logger = logging.getLogger(__name__)
+
+import requests
+class LrcLibDriver:
+    def __init__(self):
+        self.BASE_API_ADDRESS = "https://lrclib.net"
+        self.SEARCH_API = "/api/get"        
+
+    def get_lyrics(self, track_name, artist_name):
+        url = f"{self.BASE_API_ADDRESS}{self.SEARCH_API}"
+        headers = {}
+        params = {
+            "track_name": track_name,
+            "artist_name": artist_name
+        }
+
+        rsp = requests.get(url, headers=headers, params=params)
+
+        if rsp.status_code > 299:
+            raise RuntimeError(f"Failed to search in lrclib: {rsp.json()}")
+        
+        syncedLyrics = rsp.json().get("syncedLyrics")
+        if not syncedLyrics: return
+        
+        list_lyrics_raw = syncedLyrics.split("\n")
+        list_lyrics = []
+        for lyrics in list_lyrics_raw:
+            if lyrics:
+                startTimeMs, words = lyrics.split("] ", 1)
+                minutes, seconds = startTimeMs[1:].split(":", 1)
+                startTimeMs = (60 * float(minutes) + float(seconds)) * 1000
+                list_lyrics.append((startTimeMs, words))
+        df_lyrics = pd.DataFrame(list_lyrics, columns=["startTimeMs", "words"])
+
+        return df_lyrics
+
 
 class DatabasePopulator:
     def __init__(self, app=None):
@@ -153,8 +189,11 @@ class DatabasePopulator:
         with self.app.app_context():
             songs = Song.query.all()
             
-            for song in songs:
+            # Create progress bar for lyrics fetching
+            for song in tqdm(songs, desc="Fetching lyrics", unit="song"):
                 try:
+                    # Show which song is currently being processed
+                    tqdm.write(f"Processing lyrics for: {song.title} by {song.artist}")
                     self.fetch_and_store_lyrics(song.id)
                 except Exception as e:
                     logger.exception(f"Error fetching lyrics for {song.id}: {str(e)}")
