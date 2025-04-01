@@ -280,7 +280,7 @@ Catégories existantes que tu peux réutiliser:
             
             # Run multiple iterations with random batches
             # for i in range(num_iterations):
-            for category_info in tqdm(range(num_iterations), desc="AI iterations"):            
+            for _ in tqdm(range(num_iterations), desc="AI iterations"):            
                 
                 # Get random batches
                 random_batch = random.sample(songs, batch_size)
@@ -292,7 +292,11 @@ Catégories existantes que tu peux réutiliser:
                     
                     # Save after each iteration to make new categories available for next iterations
                     result = self.save_categories_to_db(categories_data)
-                
+                    logger.info(f"Iteration completed.")
+                    logger.info(f"New categories created: {result['categories_created']}")
+                    logger.info(f"Categories reused: {result['categories_reused']}")
+                    logger.info(f"Song associations created: {result['associations_created']}")
+                    
             # Final summary
             logger.info(f"Categorization completed with {len(self.new_categories)} new categories created")
             for cat in self.new_categories:
