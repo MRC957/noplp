@@ -318,7 +318,79 @@ Catégories existantes que tu peux réutiliser:
             
             return result
     
-    def run_categorization(self, mode="ai", batch_size=10, random_categories=5, num_iterations=3):
+    def categorize_by_artist(self, min_songs=9):
+        """Categorize songs based on their artist, creating categories for prolific artists
+        
+        Args:
+            min_songs: Minimum number of songs an artist must have to get their own category
+            
+        Returns:
+            dict: Results of the categorization operation
+        """
+        with app.app_context():
+            songs = self.get_all_songs()
+            
+            # Group songs by artist
+            artists_songs = {}
+            for song in songs:
+                if song.artist not in artists_songs:
+                    artists_songs[song.artist] = []
+                artists_songs[song.artist].append(song)
+            
+            # Filter for artists with at least min_songs
+            qualified_artists = {
+                artist: artist_songs 
+                for artist, artist_songs in artists_songs.items() 
+                if len(artist_songs) >= min_songs
+            }
+            
+            if not qualified_artists:
+                logger.info(f"No artists found with {min_songs}+ songs")
+                return {
+                    'total_songs': len(songs),
+                    'artists_with_categories': 0,
+                    'songs_categorized': 0,
+                    'categories_created': 0,
+                    'categories_reused': 0,
+                    'associations_created': 0
+                }
+            
+            logger.info(f"Found {len(qualified_artists)} artists with {min_songs}+ songs")
+            
+            # Create categories data for saving to DB
+            categories_data = []
+            
+            # Create category for each artist with enough songs
+            for artist, artist_songs in qualified_artists.items():
+                category_name = f"{artist}"
+                logger.info(f"Creating category '{category_name}' with {len(artist_songs)} songs")
+                
+                # Check if the category already exists
+                category = None
+                with app.app_context():
+                    category = Category.query.filter_by(name=category_name).first()
+                
+                # If category exists, use its ID; otherwise create a new UUID
+                category_id = category.id if category else str(uuid4())
+                
+                categories_data.append({
+                    "category_name": category_name,
+                    "category_id": category_id,
+                    "song_ids": [song.id for song in artist_songs],
+                    "is_new": category is None
+                })
+            
+            # Save all artist categories
+            result = self.save_categories_to_db(categories_data)
+            
+            # Add additional stats
+            result['total_songs'] = len(songs)
+            result['artists_with_categories'] = len(qualified_artists)
+            result['songs_categorized'] = sum(len(songs) for songs in qualified_artists.values())
+            
+            return result
+    
+    def run_categorization(self, mode="ai", batch_size=10, random_categories=5, num_iterations=3, min_songs_per_artist=9):
         """Main method to run the categorization process"""
         if mode == "ai":
             # Get all songs instead of just uncategorized ones
@@ -371,6 +443,15 @@ Catégories existantes que tu peux réutiliser:
             logger.info(f"Categories created: {result['categories_created']}")
             logger.info(f"Categories reused: {result['categories_reused']}")
             logger.info(f"Song associations created: {result['associations_created']}")
+        elif mode == "by_artist":
+            result = self.categorize_by_artist(min_songs=min_songs_per_artist)
+            logger.info(f"Artist categorization completed.")
+            logger.info(f"Songs processed: {result['total_songs']}")
+            logger.info(f"Artists with their own category: {result['artists_with_categories']}")
+            logger.info(f"Songs added to artist categories: {result['songs_categorized']}")
+            logger.info(f"Categories created: {result['categories_created']}")
+            logger.info(f"Categories reused: {result['categories_reused']}")
+            logger.info(f"Song associations created: {result['associations_created']}")
         else:
             logger.error(f"Unknown categorization mode: {mode}")
 
@@ -379,14 +460,16 @@ def main():
     """Main entry point for the script"""
     parser = argparse.ArgumentParser(description='AI-powered song categorization for NOPLP')
     
-    parser.add_argument('--mode', choices=['ai', 'random', 'release_year'], default='ai',
-                       help='Categorization mode: "ai" uses Groq AI, "random" creates random categories, "release_year" groups by decade')
+    parser.add_argument('--mode', choices=['ai', 'random', 'release_year', 'by_artist'], default='ai',
+                       help='Categorization mode: "ai" uses Groq AI, "random" creates random categories, "release_year" groups by decade, "by_artist" groups by artist')
     parser.add_argument('--batch-size', type=int, default=10,
                        help='Number of songs to categorize in each AI batch')
     parser.add_argument('--random-categories', type=int, default=5,
                        help='Number of random categories to generate (only for random mode)')
     parser.add_argument('--iterations', type=int, default=3,
                        help='Number of iterations to run with different random batches')
+    parser.add_argument('--min-songs', type=int, default=9,
+                       help='Minimum number of songs an artist must have to get their own category (only for by_artist mode)')
     
     args = parser.parse_args()
     
@@ -395,7 +478,8 @@ def main():
         args.mode, 
         args.batch_size, 
         args.random_categories,
-        args.iterations
+        args.iterations,
+        args.min_songs
     )
 
 
