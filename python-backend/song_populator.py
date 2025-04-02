@@ -6,6 +6,7 @@ This script provides functionality to:
 1. Search for songs on Spotify and add them to the database
 2. Fetch lyrics for songs and store them in the database
 3. Filter out English songs to maintain a French-only collection
+4. Populate release year data for songs in the database
 """
 
 import os
@@ -19,13 +20,14 @@ from dotenv import load_dotenv
 from tqdm import tqdm  # Add tqdm for progress bars
 import re
 from langdetect import detect, LangDetectException
-
+# Need to import time module for sleep functionality
+import time
 # Add parent directory to path so we can import from sibling modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import project modules
 from spotify import SpotifyDriver
-from database import init_db
+from database import init_db, db, Song
 from db_populator import DatabasePopulator
 
 # Load environment variables
@@ -170,7 +172,6 @@ class SongPopulator:
             for i, playlist in enumerate(tqdm(playlists, desc="Processing playlists", unit="playlist")):
                 try:
                     if not playlist: continue
-                    
                     result.append({
                         'index': i + 1,
                         'id': playlist['id'],
@@ -276,6 +277,100 @@ class SongPopulator:
                 'error': str(e)
             }
 
+    def populate_release_years(self, batch_size=50):
+        """
+        Populate release year data for all songs in the database that don't have it.
+        
+        Args:
+            batch_size: Number of songs to process in each batch to avoid API rate limits
+            
+        Returns:
+            dict: Summary of the operation with counts of processed and updated songs
+        """
+        try:
+            logger.info("Starting to populate release years for songs in database")
+            
+            with app.app_context():
+                # Get songs that don't have release_year set or where it's NULL
+                songs = Song.query.filter(Song.release_year.is_(None)).all()
+                total_songs = len(songs)
+                
+                if total_songs == 0:
+                    logger.info("All songs already have release year information")
+                    return {'processed': 0, 'updated': 0, 'failed': 0}
+                
+                logger.info(f"Found {total_songs} songs without release year information")
+                
+                updated_count = 0
+                failed_count = 0
+                
+                # Process songs in batches to respect API rate limits
+                for i in range(0, total_songs, batch_size):
+                    batch = songs[i:i+batch_size]
+                    
+                    # Create progress bar for song processing
+                    batch_desc = f"Processing batch {i//batch_size + 1}/{(total_songs + batch_size - 1)//batch_size}"
+                    with tqdm(total=len(batch), desc=batch_desc, unit="song") as pbar:
+                        for song in batch:
+                            try:
+                                pbar.set_description(f"Processing: {song.title[:30]} by {song.artist[:20]}...")
+                                
+                                # Get track data from Spotify API
+                                track_data = self.spotify_driver.search_track(song.id)
+                                
+                                if not track_data or 'album' not in track_data:
+                                    logger.warning(f"No album data found for song: {song.title}")
+                                    failed_count += 1
+                                    pbar.update(1)
+                                    continue
+                                
+                                # Extract release year from album release date (format: YYYY-MM-DD)
+                                release_date = track_data['album'].get('release_date')
+                                
+                                if not release_date:
+                                    logger.warning(f"No release date found for song: {song.title}")
+                                    failed_count += 1
+                                    pbar.update(1)
+                                    continue
+                                
+                                # Extract year component from release date
+                                # Formats can be YYYY-MM-DD, YYYY-MM, or just YYYY
+                                release_year = int(release_date.split('-')[0])
+                                
+                                # Update the song with release year
+                                song.release_year = release_year
+                                db.session.commit()
+                                
+                                updated_count += 1
+                                logger.info(f"Updated release year for {song.title} by {song.artist}: {release_year}")
+                                
+                            except Exception as e:
+                                failed_count += 1
+                                db.session.rollback()
+                                logger.exception(f"Error updating release year for song {song.id}: {str(e)}")
+                            finally:
+                                pbar.update(1)
+                    
+                    # Sleep between batches to avoid hitting API rate limits
+                    if i + batch_size < total_songs:
+                        logger.info(f"Pausing between batches (processed {i+len(batch)}/{total_songs} songs)")
+                        time.sleep(2)  # 2 second pause between batches
+                
+                return {
+                    'processed': total_songs,
+                    'updated': updated_count,
+                    'failed': failed_count
+                }
+                
+        except Exception as e:
+            logger.exception(f"Error populating release years: {str(e)}")
+            return {
+                'processed': 0,
+                'updated': 0,
+                'failed': 0,
+                'error': str(e)
+            }
+
 
 def main():
     """Main entry point for the script"""
@@ -295,6 +390,11 @@ def main():
     theme_parser.add_argument('-l', '--limit', type=int, default=10, help='Maximum number of results to show')
     theme_parser.add_argument('--english-threshold', type=float, default=0.7,
                              help='Confidence threshold for English detection (0.0-1.0)')
+    
+    # Add populate-years command
+    years_parser = subparsers.add_parser('populate-years', help='Populate release years for songs in the database')
+    years_parser.add_argument('-b', '--batch-size', type=int, default=50,
+                            help='Number of songs to process in each batch (default: 50)')
 
     args = parser.parse_args()
     
@@ -343,6 +443,18 @@ def main():
                     print(f"  - {result['failed']} failed")
         else:
             print(f"No playlists found for theme: '{args.query}'")
+    elif args.command == 'populate-years':
+        batch_size = args.batch_size
+        print(f"Populating release years for songs (batch size: {batch_size})...")
+        
+
+        
+        result = populator.populate_release_years(batch_size=batch_size)
+        print(f"Release year population complete:")
+        print(f"  - {result['processed']} songs processed")
+        print(f"  - {result['updated']} songs updated with release year")
+        print(f"  - {result['failed']} songs failed to update")
+        
     else:
         parser.print_help()
 

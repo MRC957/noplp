@@ -264,6 +264,60 @@ Catégories existantes que tu peux réutiliser:
             
             return self.save_categories_to_db(categories_data)
     
+    def categorize_by_release_year(self):
+        """Categorize songs based on their release year, grouping them by decades"""
+        with app.app_context():
+            songs = self.get_all_songs()
+            decades_songs = {}
+            songs_without_year = []
+            
+            # Group songs by decade
+            for song in songs:
+                if song.release_year:
+                    # Calculate the decade (1980, 1990, etc.)
+                    decade = (song.release_year // 10) * 10
+                    if decade not in decades_songs:
+                        decades_songs[decade] = []
+                    decades_songs[decade].append(song)
+                else:
+                    songs_without_year.append(song)
+            
+            # Create categories data for saving to DB
+            categories_data = []
+            
+            # Create category for each decade with songs
+            for decade, decade_songs in decades_songs.items():
+                category_name = f"Années {decade}"
+                logger.info(f"Creating category '{category_name}' with {len(decade_songs)} songs")
+                
+                # Check if the category already exists
+                category = None
+                with app.app_context():
+                    category = Category.query.filter_by(name=category_name).first()
+                
+                # If category exists, use its ID; otherwise create a new UUID
+                category_id = category.id if category else str(uuid4())
+                
+                categories_data.append({
+                    "category_name": category_name,
+                    "category_id": category_id,
+                    "song_ids": [song.id for song in decade_songs],
+                    "is_new": category is None
+                })
+            
+            logger.info(f"Found {len(songs_without_year)} songs without release year")
+            
+            # Save all decade categories
+            result = self.save_categories_to_db(categories_data)
+            
+            # Add additional stats
+            result['total_songs'] = len(songs)
+            result['songs_with_year'] = len(songs) - len(songs_without_year)
+            result['songs_without_year'] = len(songs_without_year)
+            result['decades'] = list(decades_songs.keys())
+            
+            return result
+    
     def run_categorization(self, mode="ai", batch_size=10, random_categories=5, num_iterations=3):
         """Main method to run the categorization process"""
         if mode == "ai":
@@ -307,6 +361,16 @@ Catégories existantes que tu peux réutiliser:
         elif mode == "random":
             result = self.generate_random_categories(random_categories)
             logger.info(f"Random categorization completed: {result}")
+        elif mode == "release_year":
+            result = self.categorize_by_release_year()
+            logger.info(f"Release year categorization completed.")
+            logger.info(f"Songs processed: {result['total_songs']}")
+            logger.info(f"Songs with release year: {result['songs_with_year']}")
+            logger.info(f"Songs without release year: {result['songs_without_year']}")
+            logger.info(f"Decades found: {', '.join(str(d) for d in sorted(result['decades']))}")
+            logger.info(f"Categories created: {result['categories_created']}")
+            logger.info(f"Categories reused: {result['categories_reused']}")
+            logger.info(f"Song associations created: {result['associations_created']}")
         else:
             logger.error(f"Unknown categorization mode: {mode}")
 
@@ -315,8 +379,8 @@ def main():
     """Main entry point for the script"""
     parser = argparse.ArgumentParser(description='AI-powered song categorization for NOPLP')
     
-    parser.add_argument('--mode', choices=['ai', 'random'], default='ai',
-                       help='Categorization mode: "ai" uses Groq AI, "random" creates random categories')
+    parser.add_argument('--mode', choices=['ai', 'random', 'release_year'], default='ai',
+                       help='Categorization mode: "ai" uses Groq AI, "random" creates random categories, "release_year" groups by decade')
     parser.add_argument('--batch-size', type=int, default=10,
                        help='Number of songs to categorize in each AI batch')
     parser.add_argument('--random-categories', type=int, default=5,
