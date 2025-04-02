@@ -1,3 +1,20 @@
+"""
+NOPLP (N'oubliez Pas Les Paroles) Karaoke Application Backend
+
+This Flask application serves as the backend for the NOPLP karaoke application,
+providing API endpoints for song management, lyric retrieval, and real-time 
+communication via WebSockets for the karaoke game experience.
+
+Features:
+- RESTful API for song, category, and playlist management
+- Database storage with SQLAlchemy ORM
+- WebSocket communication for real-time game interactions
+- Spotify integration for song information and lyrics
+- Lyrics retrieval and processing for the karaoke game mechanics
+
+The application uses PostgreSQL for data storage and Flask-SocketIO for WebSockets.
+"""
+
 from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
@@ -19,6 +36,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Initialize Flask application
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 app.config['SECRET_KEY'] = 'secret!'
@@ -34,6 +52,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize database
 init_db(app)
 
+# Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=5, async_mode='eventlet')
 
 sockets = []
@@ -57,6 +76,16 @@ def initialize_database():
 # A route that will trigger database initialization on first visit
 @app.route('/api/init-db', methods=['GET'])
 def init_db_route():
+    """
+    Initialize database with default data.
+    
+    This endpoint triggers the database initialization process, importing data
+    from JSON files into the database. It's typically called when the application
+    is first loaded or when a database reset is needed.
+    
+    Returns:
+        JSON: A message indicating that initialization was triggered
+    """
     initialize_database()
     return jsonify({"message": "Database initialization triggered"}), 200
 
@@ -75,6 +104,17 @@ def serve(path):
 # Add endpoint to list available playlists
 @app.route('/api/playlists', methods=['GET'])
 def get_playlists():
+    """
+    Retrieve a list of all available playlists.
+    
+    This endpoint returns information about all playlists available in the
+    application, including both stored playlists from JSON files and the
+    option to generate a random playlist. It first checks if database 
+    initialization is needed.
+    
+    Returns:
+        JSON: An array of playlist objects containing 'id' and 'name'
+    """
     try:
         # First check if database needs initialization
         initialize_database()
@@ -106,6 +146,22 @@ def get_playlists():
 # Modified route to serve playlist by name
 @app.route('/api/playlist', methods=['GET'])
 def get_playlist():
+    """
+    Retrieve a specific playlist by name or generate a random playlist.
+    
+    This endpoint returns a complete playlist with categories and songs. It supports
+    two modes:
+    1. Fetching an existing playlist from a JSON file by name
+    2. Generating a random playlist if 'random' is specified as the name
+    
+    Query Parameters:
+        name (str): The name of the playlist to retrieve, or 'random'
+        categories (int): If name='random', number of categories to include
+        songs_per_category (int): If name='random', number of songs per category
+    
+    Returns:
+        JSON: Complete playlist object with categories and songs
+    """
     try:
         # Get playlist name from query parameter, default to 'playlist'
         playlist_name = request.args.get('name', 'playlist')
@@ -147,6 +203,16 @@ def get_playlist():
 # New endpoint to get all categories from the database
 @app.route('/api/categories', methods=['GET'])
 def get_all_categories():
+    """
+    Retrieve all categories from the database.
+    
+    This endpoint returns a list of all categories stored in the database,
+    without including their associated songs. It first checks if database 
+    initialization is needed.
+    
+    Returns:
+        JSON: An array of category objects with basic category information
+    """
     try:
         # First check if database needs initialization
         initialize_database()
@@ -162,6 +228,18 @@ def get_all_categories():
 # New endpoint to get songs for a specific category
 @app.route('/api/songs', methods=['GET'])
 def get_songs():
+    """
+    Retrieve songs from the database, optionally filtered by category.
+    
+    This endpoint returns a list of songs. It can either return all songs in the
+    database or filter the results to show only songs belonging to a specific category.
+    
+    Query Parameters:
+        category_id (str, optional): When provided, returns only songs in this category
+    
+    Returns:
+        JSON: An array of song objects with basic song information
+    """
     try:
         # Get category ID from query parameter, if provided
         category_id = request.args.get('category_id')
@@ -172,7 +250,6 @@ def get_songs():
                 category = Category.query.get(category_id)
                 if not category:
                     return jsonify({"error": f"Category with ID {category_id} not found"}), 404
-                
                 # Get songs for the category
                 songs = category.songs
             else:
@@ -224,7 +301,6 @@ def get_lyrics(track_id, words_to_guess=5):
                 df_lyrics['word_count'] = count_words(df_lyrics['words'])
                 list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
                 # list_lyrics["lyrics"] = song.lyrics
-                
                 # If lyrics_time is provided, use that specific lyric
                 if specific_lyric_time is not None:
                     list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_specific_lyric(
@@ -253,42 +329,6 @@ def get_lyrics(track_id, words_to_guess=5):
                 
                 return jsonify(list_lyrics)
         
-        # # Fall back to fetching from Spotify API if not in database
-        # df_lyrics = SpotifyLyricsDriver().get_lyrics(track_id)
-        
-        # if df_lyrics is None or df_lyrics.empty:
-        #     return jsonify({"error": "No lyrics found for this track"}), 404
-            
-        # list_lyrics["lyrics"] = df_lyrics.to_dict(orient='records')
-        
-        # # If lyrics_time is provided, use that specific lyric
-        # if specific_lyric_time is not None:
-        #     list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_specific_lyric(
-        #         df_lyrics, 
-        #         specific_lyric_time
-        #     )
-        #     list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
-        # # If words_to_guess is 0, don't select any lyrics (used for lyrics browser)
-        # elif words_to_guess == 0:
-        #     list_lyrics["lyricsToGuess"] = []
-        #     list_lyrics["words_to_guess"] = 0
-        #     
-        # # Otherwise use safer version with recursion depth limit
-        # else:
-        #     try:
-        #         list_lyrics["lyricsToGuess"], list_lyrics["words_to_guess"] = extract_lyric_to_guess(
-        #             df_lyrics, 
-        #             words_to_guess=int(words_to_guess),
-        #             recursion_depth=0
-        #         )
-        #         list_lyrics["lyricsToGuess"] = list_lyrics["lyricsToGuess"].to_dict(orient='records')
-        #     except Exception as e:
-        #         logger.error(f"Error extracting lyrics to guess: {str(e)}")
-        #         # Fallback to first line if extraction fails
-        #         list_lyrics["lyricsToGuess"] = df_lyrics.iloc[:1].to_dict(orient='records')
-        #         list_lyrics["words_to_guess"] = 1
-        #     
-        # return jsonify(list_lyrics)
     except Exception as e:
         logger.exception(f"Error getting lyrics for {track_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -377,6 +417,25 @@ def fetch_lyrics():
 
 @app.route('/api/database/add_song', methods=['POST'])
 def add_song():
+    """
+    Add a new song to the database.
+    
+    This endpoint searches for a song in the Spotify API using either track name and artist 
+    or a Spotify track ID, then adds it to the database. The song can optionally be 
+    associated with one or more categories upon creation.
+    
+    Request Body:
+        track_name (str, optional): The name of the track to search for
+        artist (str, optional): The name of the artist
+        track_id (str, optional): Spotify track ID (can be used instead of track_name/artist)
+        category_ids (list, optional): List of category IDs to associate the song with
+    
+    Returns:
+        JSON: Details of the added song including Spotify metadata
+        
+    Note:
+        Either track_id OR both track_name and artist must be provided
+    """
     try:
         data = request.json
         track_name = data.get('track_name')
@@ -399,6 +458,22 @@ def add_song():
 
 @app.route('/api/database/categories', methods=['POST'])
 def create_category():
+    """
+    Create a new category in the database.
+    
+    This endpoint creates a new song category with a UUID and the provided name.
+    Categories are used to organize songs in the karaoke application.
+    
+    Request Body:
+        name (str): The name of the category to create
+    
+    Returns:
+        JSON: The created category data with status code 201
+        
+    Error Responses:
+        400: If no name is provided
+        500: For database errors
+    """
     try:
         data = request.json
         if not data or not data.get('name'):
@@ -515,6 +590,31 @@ def put_category_details(category_id):
 
 @app.route('/api/database/categories/<category_id>', methods=['GET'])
 def get_category_details(category_id):
+    """
+    Retrieve detailed information about a specific category.
+    
+    This endpoint returns complete information about a single category including all
+    its associated songs. It's used by the CategoryDetailsView component in the frontend
+    when a user selects a category to view or edit its details.
+    
+    The endpoint populates the category details page, showing the category name,
+    ID, and the complete list of songs belonging to this category, enabling actions
+    like renaming the category, removing individual songs, or bulk-removing multiple
+    songs from the category.
+    
+    Path Parameters:
+        category_id (str): The unique identifier of the category to retrieve
+        
+    Returns:
+        JSON: Complete category object with:
+            - id: The category's unique identifier
+            - name: The category name
+            - songs: Array of song objects associated with this category
+    
+    Error Responses:
+        404: If the category with the specified ID is not found
+        500: Server error during database operation
+    """
     try:
         with app.app_context():
             # Find the category by ID
@@ -522,7 +622,7 @@ def get_category_details(category_id):
             
             if not category:
                 return jsonify({"error": f"Category with ID {category_id} not found"}), 404
-                
+            
             # Return category details including its songs
             return jsonify(category.to_dict(include_songs=True)), 200
     except Exception as e:
@@ -531,6 +631,32 @@ def get_category_details(category_id):
 
 @app.route('/api/database/songs/<song_id>', methods=['GET'])
 def get_song_details(song_id):
+    """
+    Retrieve detailed information about a specific song.
+    
+    This endpoint returns complete information about a single song including all its
+    associated categories. It's used by the SongDetailsView component in the frontend
+    when a user selects a song to view or edit its details.
+    
+    The endpoint populates the song details page, showing the song title, artist,
+    ID, and the complete list of categories this song belongs to, enabling actions
+    like removing the song from specific categories or adding it to new categories.
+    
+    Path Parameters:
+        song_id (str): The unique identifier of the song to retrieve
+        
+    Returns:
+        JSON: Complete song object with:
+            - id: The song's unique identifier/Spotify track ID
+            - title: The song title
+            - artist: The artist name
+            - categories: Array of category objects this song belongs to
+            - lyrics: Array of lyrics data if available
+            
+    Error Responses:
+        404: If the song with the specified ID is not found
+        500: Server error during database operation
+    """
     try:
         with app.app_context():
             # Find the song by ID
@@ -538,7 +664,7 @@ def get_song_details(song_id):
             
             if not song:
                 return jsonify({"error": f"Song with ID {song_id} not found"}), 404
-                
+            
             # Return song details including its categories
             return jsonify(song.to_dict(include_categories_full=True)), 200
     except Exception as e:
@@ -547,6 +673,34 @@ def get_song_details(song_id):
 
 @app.route('/api/database/categories/<category_id>/songs', methods=['POST'])
 def add_songs_to_category(category_id):
+    """
+    Add multiple songs to a specific category.
+    
+    This endpoint associates one or more songs with a category. It's used by the
+    AddSongsToCategory component in the frontend when users want to add multiple
+    songs to a category at once.
+    
+    The endpoint accepts a list of song IDs and adds them all to the specified 
+    category. It checks for existing associations to avoid duplicates and returns
+    details about which songs were successfully added.
+    
+    Path Parameters:
+        category_id (str): The unique identifier of the category to add songs to
+        
+    Request Body:
+        song_ids (list): Array of song IDs to add to the category
+        
+    Returns:
+        JSON: Object containing:
+            - message: Summary of the operation 
+            - category: The updated category data
+            - songs_added: Array of song objects that were added to the category
+            
+    Error Responses:
+        400: If song_ids is missing from the request
+        404: If the category with the specified ID is not found
+        500: Server error during database operation
+    """
     try:
         data = request.json
         if not data or 'song_ids' not in data:
@@ -560,7 +714,7 @@ def add_songs_to_category(category_id):
             
             if not category:
                 return jsonify({"error": f"Category with ID {category_id} not found"}), 404
-                
+            
             # Find and associate the songs
             songs_added = []
             for song_id in song_ids:
@@ -599,7 +753,7 @@ def add_categories_to_song(song_id):
             
             if not song:
                 return jsonify({"error": f"Song with ID {song_id} not found"}), 404
-                
+            
             # Find and associate the categories
             categories_added = []
             for category_id in category_ids:
@@ -638,7 +792,7 @@ def add_lyrics_to_song(song_id):
             
             if not song:
                 return jsonify({"error": f"Song with ID {song_id} not found"}), 404
-                
+            
             # Update the lyrics
             song.lyrics = lyrics
             db.session.commit()
@@ -662,10 +816,10 @@ def remove_song_from_category(song_id, category_id):
             
             if not song:
                 return jsonify({"error": f"Song with ID {song_id} not found"}), 404
-                
+            
             if not category:
                 return jsonify({"error": f"Category with ID {category_id} not found"}), 404
-                
+            
             # Check if the association exists
             if category in song.categories:
                 # Remove the association
@@ -700,7 +854,7 @@ def remove_multiple_songs_from_category(category_id):
             
             if not category:
                 return jsonify({"error": f"Category with ID {category_id} not found"}), 404
-                
+            
             # Find and remove the songs from the category
             songs_removed = []
             for song_id in song_ids:
@@ -732,7 +886,7 @@ def delete_category(category_id):
             
             if not category:
                 return jsonify({"error": f"Category with ID {category_id} not found"}), 404
-                
+            
             # Remove associations with songs but keep the songs
             category.songs = []
                 
@@ -756,7 +910,7 @@ def delete_song(song_id):
             
             if not song:
                 return jsonify({"error": f"Song with ID {song_id} not found"}), 404
-                
+            
             # Remove associations with categories but keep the categories
             song.categories = []
                 
@@ -773,6 +927,25 @@ def delete_song(song_id):
 # Add endpoint to get all categories with their songs
 @app.route('/api/database/categories-with-songs', methods=['GET'])
 def get_categories_with_songs():
+    """
+    Retrieve all categories with their associated songs.
+    
+    This endpoint returns the complete list of categories, each including its full
+    collection of associated songs. Used primarily by the category listing and 
+    management interfaces in the frontend DatabaseEditor component.
+    
+    The CategoryList component uses this endpoint to display each category with 
+    its songs, allowing users to expand/collapse categories to view their songs.
+    
+    Returns:
+        JSON: Array of category objects, each containing:
+            - id: Unique category identifier
+            - name: Category name
+            - songs: Array of song objects associated with this category
+    
+    Error Responses:
+        500: Server error during database operation
+    """
     try:
         # First check if database needs initialization
         initialize_database()
@@ -788,6 +961,29 @@ def get_categories_with_songs():
 # Add endpoint to get all categories with their songs
 @app.route('/api/database/songs-with-categories', methods=['GET'])
 def get_songs_with_categories():
+    """
+    Retrieve all songs with their associated categories.
+    
+    This endpoint returns the complete list of songs in the database, each including
+    its full collection of associated categories. Used primarily by the SongList 
+    component in the frontend to display songs with their category assignments.
+    
+    The database editor uses this endpoint to populate the song list with category
+    information, allowing users to manage song-category associations directly from
+    the song listing interface.
+    
+    Returns:
+        JSON: Array of song objects, each containing:
+            - id: Unique song identifier
+            - track_id: Spotify track ID (same as id for compatibility)
+            - title: Song title
+            - artist: Song artist name
+            - name: Formatted name (title + artist) for display purposes
+            - categories: Array of category objects associated with this song
+    
+    Error Responses:
+        500: Server error during database operation
+    """
     try:
         # First check if database needs initialization
         initialize_database()
@@ -905,7 +1101,6 @@ def manage_lyrics():
                 if lyric['startTimeMs'] == lyric_time:
                     selected_lyric = lyric
                     break
-                    
             if not selected_lyric:
                 return jsonify({"error": f"No lyric found at time {lyric_time}"}), 404
                 
@@ -941,7 +1136,6 @@ def manage_lyrics():
             
         else:
             return jsonify({"error": f"Unknown operation: {operation}"}), 400
-            
     except Exception as e:
         logger.exception(f"Error managing lyrics: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -1043,6 +1237,19 @@ def get_lyrics_internal(track_id, words_to_guess=5, specific_lyric_time=None):
 
 # Socket.IO error handling decorator
 def handle_socket_errors(f):
+    """
+    Decorator to handle exceptions in Socket.IO event handlers.
+    
+    This decorator catches any exceptions raised in Socket.IO event handlers
+    and logs them without re-raising, preventing GeneratorExit errors that
+    can occur when Socket.IO connections are interrupted during exception handling.
+    
+    Args:
+        f (function): The Socket.IO event handler function to wrap
+        
+    Returns:
+        function: The wrapped function with error handling
+    """
     def wrapped(*args, **kwargs):
         try:
             return f(*args, **kwargs)
@@ -1054,6 +1261,15 @@ def handle_socket_errors(f):
 @socketio.on('connect')
 @handle_socket_errors
 def handle_connect(auth=None):
+    """
+    Handle new WebSocket connections.
+    
+    This event handler is triggered when a client connects to the WebSocket server.
+    It adds the client to the 'karaoke' room for broadcast messaging and logs the connection.
+    
+    Args:
+        auth (dict, optional): Authentication information (not currently used)
+    """
     sockets.append(request.sid)
     join_room('karaoke')
     logger.info(f"Client connected: {request.sid}, total connections: {len(sockets)}")
@@ -1061,6 +1277,12 @@ def handle_connect(auth=None):
 @socketio.on('disconnect')
 @handle_socket_errors
 def handle_disconnect():
+    """
+    Handle WebSocket disconnections.
+    
+    This event handler is triggered when a client disconnects from the WebSocket server.
+    It removes the client from the 'karaoke' room and updates the active connections list.
+    """
     leave_room('karaoke')
     if request.sid in sockets:
         sockets.remove(request.sid)
@@ -1069,91 +1291,238 @@ def handle_disconnect():
 @socketio.on('show-intro')
 @handle_socket_errors
 def handle_show_intro():
+    """
+    Broadcast a command to show the intro screen to all clients.
+    
+    When a presenter client triggers this event, it broadcasts to all other
+    connected clients to navigate to the intro screen of the karaoke application.
+    This is typically used at the start of a game or to reset the game state.
+    """
     emit('to-intro', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('show-categories')
 @handle_socket_errors
 def handle_show_categories(args):
+    """
+    Broadcast a command to show the categories selection screen.
+    
+    This event is triggered when a presenter wants all clients to navigate to
+    the categories selection screen. It forwards any provided arguments to the clients.
+    
+    Args:
+        args: Parameters related to the categories to be displayed
+    """
     emit('to-categories', args, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('show-song-list')
 @handle_socket_errors
 def handle_show_song_list(args):
+    """
+    Broadcast a command to show the song list screen for a selected category.
+    
+    This event is triggered when a presenter selects a category and wants all clients
+    to see the list of songs in that category.
+    
+    Args:
+        args: Parameters containing category information and related songs
+    """
     emit('to-song-list', args, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('goto-song')
 @handle_socket_errors
 def handle_goto_song(args):
+    """
+    Broadcast a command to navigate to a specific song screen.
+    
+    This event is triggered when a presenter selects a song from the list
+    and wants all clients to navigate to that song's page.
+    
+    Args:
+        args: Parameters containing song information and related data
+    """
     emit('to-song', args, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('play-song')
 @handle_socket_errors
 def handle_play_song():
+    """
+    Broadcast a command to play the current song.
+    
+    This event is triggered when a presenter starts playing a song.
+    All clients will start playing the song simultaneously.
+    """
     emit('play', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('propose-lyrics')
 @handle_socket_errors
 def handle_propose_lyrics(args):
+    """
+    Broadcast suggested lyrics to guess to all clients.
+    
+    This event is triggered when a presenter selects specific lyrics
+    for contestants to guess during the game.
+    
+    Args:
+        args: Parameters containing the lyrics to guess and related data
+    """
     emit('show-suggested-lyrics', args, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('validate-lyrics')
 @handle_socket_errors
 def handle_validate_lyrics():
+    """
+    Broadcast a command to validate the lyrics guessed by participants.
+    
+    This event is triggered when a presenter wants to validate the
+    lyrics that have been guessed by the contestants. It tells all clients
+    to enter validation mode.
+    """
     emit('validate-lyrics', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('freeze-lyrics')
 @handle_socket_errors
 def handle_freeze_lyrics():
+    """
+    Broadcast a command to freeze the current lyrics display.
+    
+    This event is triggered when a presenter wants to lock the current state
+    of lyrics display, typically after a contestant has made a guess. It
+    prevents further changes until the presenter decides to continue.
+    """
     emit('freeze-lyrics', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('reveal-lyrics')
 @handle_socket_errors
 def handle_reveal_lyrics():
+    """
+    Broadcast a command to reveal the correct lyrics.
+    
+    This event is triggered when a presenter wants to show the correct lyrics
+    to all participants, typically after a contestant has failed to guess correctly.
+    """
     emit('reveal-lyrics', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('continue-lyrics')
 @handle_socket_errors
 def handle_continue_lyrics():
+    """
+    Broadcast a command to continue the karaoke flow after freezing.
+    
+    This event is triggered when a presenter wants to continue the game
+    after a lyrics freeze, typically moving to the next part of the song
+    or allowing a new contestant to participate.
+    """
     emit('continue-lyrics', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('lyrics-validation-result')
 @handle_socket_errors
 def handle_lyrics_validation_result(data):
+    """
+    Broadcast the validation result of guessed lyrics.
+    
+    This event forwards the validation results from the presenter to all other
+    clients, indicating whether the contestant correctly guessed the lyrics or not.
+    
+    Args:
+        data: Information about the validation result (correct/incorrect)
+    """
     emit('lyrics-validation-result', data, room='karaoke', include_self=False)
 
 @socketio.on('lyrics-words-count')
 @handle_socket_errors
 def handle_lyrics_words_count(data):
+    """
+    Broadcast the word count information for the current lyrics.
+    
+    This event forwards information about the number of words in the
+    current lyric segment that need to be guessed.
+    
+    Args:
+        data: Information containing the word count and related data
+    """
     emit('lyrics-words-count', data, room='karaoke', include_self=False)
 
 @socketio.on('update-lyrics-to-guess')
 @handle_socket_errors
 def handle_update_lyrics_to_guess(data):
-    # Forward the updated lyrics data to all clients in the room
+    """
+    Broadcast updated lyrics to guess to all clients.
+    
+    This event is triggered when a presenter updates the specific lyrics
+    that should be guessed. It forwards the updated lyrics data to all
+    other clients in the karaoke room.
+    
+    Args:
+        data: The updated lyrics data to broadcast
+    """
     emit('lyrics-to-guess-updated', data, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('set-perf-mode')
 @handle_socket_errors
 def handle_set_perf_mode(args):
+    """
+    Broadcast a command to change the performance mode.
+    
+    This event is triggered when a presenter changes the game's performance mode,
+    which affects how lyrics are displayed and how the game behaves.
+    
+    Args:
+        args: Parameters containing the performance mode settings
+    """
     emit('set-perf-mode', args, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('lyrics-data')
 @handle_socket_errors
 def handle_lyrics_data(data):
+    """
+    Broadcast lyrics data to all clients.
+    
+    This event is triggered when new lyrics data becomes available,
+    for example when a new song is selected or when lyrics are loaded.
+    
+    Args:
+        data: The lyrics data to broadcast
+    """
     emit('lyrics-data', data, room='karaoke', skip_sid=request.sid)
 
 @socketio.on('lyrics-loading')
 @handle_socket_errors
 def handle_lyrics_loading():
+    """
+    Broadcast a lyrics loading state to all clients.
+    
+    This event is triggered when lyrics are being loaded or processed.
+    It notifies all clients that lyrics are currently being fetched or processed,
+    so they can display appropriate loading indicators.
+    """
     emit('lyrics-loading', room='karaoke', skip_sid=request.sid)
 
 @socketio.on('lyrics-error')
 @handle_socket_errors
 def handle_lyrics_error(error):
+    """
+    Broadcast a lyrics error to all clients.
+    
+    This event is triggered when there's an error loading or processing lyrics.
+    It forwards the error information to all connected clients.
+    
+    Args:
+        error: Error information to broadcast
+    """
     emit('lyrics-error', error, room='karaoke', skip_sid=request.sid)
 
 @app.route('/api/spotify/auth', methods=['GET'])
 def get_spotify_auth():
+    """
+    Get Spotify authentication URL for authorization flow.
+    
+    This endpoint initiates the Spotify OAuth process by generating an
+    authorization URL that the client should redirect to. After authentication
+    on Spotify's site, the user will be redirected back to the application.
+    
+    Returns:
+        JSON: Object containing the Spotify authorization URL
+    """
     try:
         spotify = SpotifyDriver()
         auth_url = spotify.get_auth_url()
@@ -1164,6 +1533,21 @@ def get_spotify_auth():
 
 @app.route('/api/spotify/token', methods=['POST'])
 def get_spotify_token():
+    """
+    Exchange authorization code for Spotify access token.
+    
+    This endpoint completes the Spotify OAuth flow by exchanging the authorization
+    code received after user login for an access token and refresh token.
+    
+    Request Body:
+        code (str): The authorization code returned by Spotify after user login
+    
+    Returns:
+        JSON: Object containing the access token, refresh token, and other token info
+        
+    Error Responses:
+        500: If token exchange fails
+    """
     try:
         code = request.json.get('code')
         spotify = SpotifyDriver()
@@ -1175,6 +1559,18 @@ def get_spotify_token():
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    """
+    Global exception handler for unhandled exceptions.
+    
+    This catches any exceptions not handled by specific error handlers
+    in the routes, logs them, and returns a 500 error response.
+    
+    Args:
+        e: The unhandled exception
+        
+    Returns:
+        JSON: Error response with status code 500
+    """
     logger.exception(f"Unhandled exception: {str(e)}")
     return jsonify({"error": str(e)}), 500
 
