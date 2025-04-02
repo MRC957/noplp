@@ -24,12 +24,8 @@ Depuis un navigateur (Firefox) : [http://localhost:8080](http://localhost:8080) 
 
 
 TODO:
-- Store songs + lyrics inside a database
-- Implement song player from Spotify instead of .mp3 player
-- Add a "playlist refresh" interface
-- Missed lyrics are chosen randomly based on the difficulty level
-- Populate song database (via Groq or Google)
+- clean database
+- export DB content
+- package application
 
-- Régie capable de changer les mots à deviner (possibilité de regénérer)
-- pq Fred rrançois a 0.5sec de décalage avec les lyrics
-- Ajouter page pour mangt DB (lier catégories, ajouter new song by name or track_id)
+- improve DB manager performances

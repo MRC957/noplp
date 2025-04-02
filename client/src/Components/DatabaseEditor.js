@@ -215,7 +215,7 @@ const DatabaseEditor = () => {
       // Refresh stats
       fetchStats();
       
-      // Return true to indicate success
+// Return true to indicate success
       return true;
     } catch (err) {
       setError('Failed to remove songs from category');
@@ -238,6 +238,26 @@ const DatabaseEditor = () => {
       return false;
     } catch (err) {
       setError('Failed to delete category');
+      console.error(err);
+      return false;
+    }
+  };
+
+  const deleteSongs = async (songIds) => {
+    try {
+      // Delete songs one by one using Promise.all for parallel processing
+      const deletePromises = songIds.map(songId => 
+        axios.delete(`/api/database/songs/${songId}`)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      // Refresh data after deletion
+      fetchStats();
+      
+      return true;
+    } catch (err) {
+      setError('Failed to delete songs');
       console.error(err);
       return false;
     }
@@ -343,6 +363,7 @@ const DatabaseEditor = () => {
             onSelectSong={loadSongDetails}
             onRemoveCategory={removeSongFromCategory}
             onAddCategory={handleShowAddCategoriesToSong}
+            onDeleteSongs={deleteSongs}
           />
         );
       
