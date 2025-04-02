@@ -583,7 +583,7 @@ def add_songs_to_category(category_id):
         db.session.rollback()
         logger.exception(f"Error adding songs to category: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    
+
 @app.route('/api/database/songs/<song_id>/categories', methods=['POST'])
 def add_categories_to_song(song_id):
     try:
@@ -682,6 +682,44 @@ def remove_song_from_category(song_id, category_id):
     except Exception as e:
         db.session.rollback()
         logger.exception(f"Error removing song from category: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Add endpoint to delete multiple songs from a category
+@app.route('/api/database/categories/<category_id>/remove-songs', methods=['POST'])
+def remove_multiple_songs_from_category(category_id):
+    try:
+        data = request.json
+        if not data or 'song_ids' not in data:
+            return jsonify({"error": "list of songs to remove is required"}), 400
+            
+        song_ids = data['song_ids']
+        
+        with app.app_context():
+            # Find the category
+            category = Category.query.get(category_id)
+            
+            if not category:
+                return jsonify({"error": f"Category with ID {category_id} not found"}), 404
+                
+            # Find and remove the songs from the category
+            songs_removed = []
+            for song_id in song_ids:
+                song = Song.query.get(song_id)
+                if song and song in category.songs:
+                    category.songs.remove(song)
+                    songs_removed.append(song.to_dict())
+            
+            # Commit the changes
+            db.session.commit()
+            
+            return jsonify({
+                "message": f"Removed {len(songs_removed)} songs from category '{category.name}'",
+                "category": category.to_dict(),
+                "songs_removed": songs_removed
+            }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error removing songs from category: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # Add endpoint to delete a category

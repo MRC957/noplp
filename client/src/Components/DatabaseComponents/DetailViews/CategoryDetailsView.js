@@ -11,6 +11,7 @@ const CategoryDetailsView = ({
   onAddSongs, 
   onDelete, 
   onRemoveSong,
+  onRemoveSongs,
   onRename
 }) => {
   // Local state to track the current category with refreshed songs
@@ -23,11 +24,17 @@ const CategoryDetailsView = ({
   const [isRenaming, setIsRenaming] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [renameError, setRenameError] = useState('');
+  // State for multi-selection
+  const [selectedSongIds, setSelectedSongIds] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   
   // Update local state when parent category prop changes
   useEffect(() => {
     setCurrentCategory(category);
     setNewCategoryName(category?.name || '');
+    // Reset selection when category changes
+    setSelectedSongIds([]);
+    setIsSelectionMode(false);
   }, [category]);
   
   // Handle song removal with optimistic UI update and refresh
@@ -55,6 +62,45 @@ const CategoryDetailsView = ({
       console.error("Error removing song:", error);
       // Remove from the "removing" list if there was an error
       setRemovingSongIds(prev => prev.filter(id => id !== songId));
+    }
+  };
+
+  // Handle multiple songs removal
+  const handleRemoveSelectedSongs = async () => {
+    if (selectedSongIds.length === 0) return;
+    
+    // Confirm before removing multiple songs
+    if (!window.confirm(`Remove ${selectedSongIds.length} song(s) from this category?`)) {
+      return;
+    }
+    
+    // Add all selected songs to "removing" list for immediate visual feedback
+    setRemovingSongIds(prev => [...prev, ...selectedSongIds]);
+    
+    try {
+      // Call the parent's bulk remove function
+      await onRemoveSongs(selectedSongIds, currentCategory.id);
+      
+      // Optimistically update the local category state
+      setCurrentCategory(prevCategory => {
+        if (!prevCategory || !prevCategory.songs) return prevCategory;
+        
+        return {
+          ...prevCategory,
+          songs: prevCategory.songs.filter(song => !selectedSongIds.includes(song.id))
+        };
+      });
+      
+      // Clear selections after successful removal
+      setSelectedSongIds([]);
+      // Exit selection mode
+      setIsSelectionMode(false);
+      
+    } catch (error) {
+      console.error("Error removing selected songs:", error);
+    } finally {
+      // Remove from the "removing" list
+      setRemovingSongIds(prev => prev.filter(id => !selectedSongIds.includes(id)));
     }
   };
   
@@ -95,6 +141,43 @@ const CategoryDetailsView = ({
       console.error('Rename error:', error);
     }
   };
+
+  // Handle song selection toggle
+  const handleSelectSong = (songId) => {
+    setSelectedSongIds(prev => {
+      // If song is already selected, remove it, otherwise add it
+      if (prev.includes(songId)) {
+        return prev.filter(id => id !== songId);
+      } else {
+        return [...prev, songId];
+      }
+    });
+  };
+
+  // Toggle selection mode
+  const handleToggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      // Clear selections when exiting selection mode
+      setSelectedSongIds([]);
+    }
+  };
+
+  // Select all songs
+  const handleSelectAll = () => {
+    if (currentCategory?.songs) {
+      const allSongIds = currentCategory.songs
+        .filter(song => !removingSongIds.includes(song.id))
+        .map(song => song.id);
+      
+      // If all songs are already selected, deselect all
+      if (allSongIds.length === selectedSongIds.length) {
+        setSelectedSongIds([]);
+      } else {
+        setSelectedSongIds(allSongIds);
+      }
+    }
+  };
   
   const headerActions = [
     {
@@ -103,7 +186,12 @@ const CategoryDetailsView = ({
       className: 'add-button'
     },
     {
-      label: 'Rename',
+      label: isSelectionMode ? 'Cancel Selection' : 'Remove multiple Songs',
+      onClick: handleToggleSelectionMode,
+      className: isSelectionMode ? 'cancel-button' : 'delete-button'
+    },
+    {
+      label: 'Rename Category',
       onClick: handleStartRename,
       className: 'edit-button'
     },
@@ -152,21 +240,47 @@ const CategoryDetailsView = ({
           )}
           <p>ID: {currentCategory.id}</p>
           <div className="category-songs">
-            <h3>Songs in this Category:</h3>
+            <h3>
+              Songs in this Category:
+              {isSelectionMode && (
+                <span className="selection-actions">
+                  <button onClick={handleSelectAll} className="select-all-button">
+                    {selectedSongIds.length === currentCategory.songs?.filter(song => !removingSongIds.includes(song.id)).length 
+                      ? 'Deselect All' 
+                      : 'Select All'}
+                  </button>
+                  <button 
+                    onClick={handleRemoveSelectedSongs} 
+                    disabled={selectedSongIds.length === 0}
+                    className="danger-button">
+                    Remove Selected ({selectedSongIds.length})
+                  </button>
+                </span>
+              )}
+            </h3>
             {isRefreshing ? (
               <p>Refreshing songs...</p>
             ) : currentCategory.songs?.length > 0 ? (
-              <ul>
+              <ul className={isSelectionMode ? 'selection-mode' : ''}>
                 {currentCategory.songs
                   .filter(song => !removingSongIds.includes(song.id))
                   .map(song => (
-                    <li key={song.id}>
-                      {song.title} by {song.artist}
-                      <button 
-                        onClick={() => handleRemoveSong(song.id, currentCategory.id)}
-                        className="delete-button danger-button">
-                        Remove
-                      </button>
+                    <li key={song.id} className={selectedSongIds.includes(song.id) ? 'selected' : ''}>
+                      {isSelectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedSongIds.includes(song.id)}
+                          onChange={() => handleSelectSong(song.id)}
+                        />
+                      )}
+                      <span className="song-title">{song.title} by {song.artist}</span>
+                      {!isSelectionMode && (
+                        <button 
+                          onClick={() => handleRemoveSong(song.id, currentCategory.id)}
+                          className="delete-button danger-button">
+                          Remove
+                        </button>
+                      )}
                     </li>
                   ))
                 }

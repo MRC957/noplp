@@ -205,6 +205,25 @@ const DatabaseEditor = () => {
     }
   };
 
+  // New function to remove multiple songs from a category at once
+  const removeSongsFromCategory = async (songIds, categoryId) => {
+    try {
+      await axios.post(`/api/database/categories/${categoryId}/remove-songs`, {
+        song_ids: songIds
+      });
+      
+      // Refresh stats
+      fetchStats();
+      
+      // Return true to indicate success
+      return true;
+    } catch (err) {
+      setError('Failed to remove songs from category');
+      console.error(err);
+      return false;
+    }
+  };
+
   // Item deletion functions
   const deleteCategory = async (categoryId) => {
     try {
@@ -356,6 +375,7 @@ const DatabaseEditor = () => {
             onAddSongs={handleShowAddSongsToCategory}
             onDelete={() => deleteCategory(selectedCategory.id)}
             onRemoveSong={removeSongFromCategory}
+            onRemoveSongs={removeSongsFromCategory}
             onRename={renameCategory}
           />
         );
