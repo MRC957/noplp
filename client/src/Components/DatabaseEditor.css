@@ -157,6 +157,10 @@
   margin-top: 0;
 }
 
+.back-button:hover {
+  background-color: #586066;
+}
+
 .back-button {
   margin-top: 20px;
   padding: 8px 16px;
@@ -190,6 +194,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.delete-button:hover{
+  background-color: #b81c2b;
+  /* color: black; */
 }
 
 .delete-button {
@@ -629,3 +638,45 @@
 }
 
 
+/* Category Songs List */
+.category-songs ul {
+  list-style: none;
+  padding: 0;
+}
+
+.category-songs li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.category-songs li:last-child {
+  border-bottom: none;
+}
+
+/* Ensure song title takes up available space but doesn't push button */
+.song-title {
+  margin-right: 15px; /* Add consistent spacing between song title and button */
+  overflow: hidden;   /* Prevent long titles from breaking layout */
+  text-overflow: ellipsis; /* Show ellipsis for overflowing text */
+}
+
+/* Style for the Remove button with fixed width */
+li button.delete-button {
+  min-width: 80px;     /* Set fixed width */
+  max-width: 20%;
+  text-align: center;  /* Center the text */
+  flex-shrink: 0;      /* Prevent button from shrinking */
+}
+
+/* Button styles */
+.select-button {
+  background-color: #3399ff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}

@@ -230,7 +230,7 @@ const SongDetailsView = ({
         actions={headerActions} 
       />
       
-      <h2>Song Details</h2>
+      <h1>Song Details</h1>
       {currentSong ? (
         <div>
           <h3>{currentSong.title} by {currentSong.artist}</h3>
@@ -260,9 +260,12 @@ const SongDetailsView = ({
             )}
           </div>
 
+          <div className="section-separator">
+            <hr />
+          </div>
+
           <div className="song-lyrics">
-            <div className="lyrics-header">
-              <h3>Lyrics</h3>
+            <div className="lyrics-actions">
               {!isEditingLyrics && (
                 <button 
                   onClick={handleStartEditLyrics}

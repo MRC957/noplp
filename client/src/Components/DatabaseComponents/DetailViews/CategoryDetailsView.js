@@ -211,7 +211,7 @@ const CategoryDetailsView = ({
         actions={headerActions} 
       />
       
-      <h2>Category Details</h2>
+      <h1>Category Details</h1>
       {currentCategory ? (
         <div>
           {isRenaming ? (
@@ -266,6 +266,7 @@ const CategoryDetailsView = ({
                   .filter(song => !removingSongIds.includes(song.id))
                   .map(song => (
                     <li key={song.id} className={selectedSongIds.includes(song.id) ? 'selected' : ''}>
+                      <span className="song-title">{song.title} by {song.artist}</span>
                       {isSelectionMode && (
                         <input
                           type="checkbox"
@@ -273,7 +274,6 @@ const CategoryDetailsView = ({
                           onChange={() => handleSelectSong(song.id)}
                         />
                       )}
-                      <span className="song-title">{song.title} by {song.artist}</span>
                       {!isSelectionMode && (
                         <button 
                           onClick={() => handleRemoveSong(song.id, currentCategory.id)}
