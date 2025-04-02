@@ -588,60 +588,108 @@
   border: 1px solid #f5c6cb;
 }
 
-.add-button {
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 10px;
-  cursor: pointer;
+/* Details Header Styles */
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0 20px 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.add-button:hover {
-  background-color: #218838;
-}
-
-.save-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-
-.save-button:hover {
-  background-color: #0069d9;
-}
-
-.save-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.cancel-button {
+.details-header .back-button {
+  margin-top: 0;
+  padding: 8px 16px;
   background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 5px 10px;
   cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.cancel-button:hover {
+.details-header .back-button:hover {
   background-color: #5a6268;
+  transform: translateY(-1px);
 }
 
-.cancel-button:disabled {
+.details-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.details-header button:not(.back-button) {
+  margin-top: 0;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.details-header button:not(.back-button):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.details-header .add-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.details-header .add-button:hover {
+  background-color: #218838;
+}
+
+.details-header .edit-button {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.details-header .edit-button:hover {
+  background-color: #138496;
+}
+
+.details-header .delete-button,
+.details-header .danger-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.details-header .delete-button:hover,
+.details-header .danger-button:hover {
+  background-color: #c82333;
+}
+
+.details-header .select-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.details-header .select-button:hover {
+  background-color: #0069d9;
+}
+
+.details-header button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
-}
-
-
-/* Category Songs List */
-.category-songs ul {
-  list-style: none;
-  padding: 0;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
 }
 
 .category-songs li {
@@ -665,7 +713,7 @@
 
 /* Style for the Remove button with fixed width */
 li button.delete-button {
-  min-width: 80px;     /* Set fixed width */
+  min-width: 20%;
   max-width: 20%;
   text-align: center;  /* Center the text */
   flex-shrink: 0;      /* Prevent button from shrinking */

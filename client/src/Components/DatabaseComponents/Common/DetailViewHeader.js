@@ -1,5 +1,5 @@
 import React from 'react';
-import '../../DatabaseEditor.css';
+import '../../../Components/DatabaseEditor.css';
 
 /**
  * A reusable header component for detail views
@@ -17,14 +17,17 @@ const DetailViewHeader = ({ onBack, backText = 'Back', actions = [] }) => {
         {backText}
       </button>
       
-      {actions.map((action, index) => (
-        <button 
-          key={index}
-          onClick={action.onClick}
-          className={`${action.className || ''} ${action.variant === 'danger' ? 'danger-button' : ''}`}>
-          {action.label}
-        </button>
-      ))}
+      <div className="details-header-actions">
+        {actions.map((action, index) => (
+          <button 
+            key={index}
+            onClick={action.onClick}
+            disabled={action.disabled}
+            className={`${action.className || ''} ${action.variant === 'danger' ? 'danger-button' : ''}`}>
+            {action.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
