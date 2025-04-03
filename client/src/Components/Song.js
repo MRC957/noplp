@@ -582,6 +582,15 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
   // Main render
   return (
     <div className="song-component">
+      
+      {playerState.errorMessage && <div className="error-message">{playerState.errorMessage}</div>}
+      
+      <SongHeader 
+        title={song?.title} 
+        artist={song?.artist} 
+        year={song?.release_year} 
+      />
+      
       <SpotifyPlayer
         ref={spotifyPlayerRef}
         trackId={pendingTrackId}
@@ -589,13 +598,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
         onAudioReady={handleAudioReady}
         onPlaybackUpdate={handlePlaybackUpdate}
         onError={handlePlayerError}
-      />
-      
-      {playerState.errorMessage && <div className="error-message">{playerState.errorMessage}</div>}
-      
-      <SongHeader 
-        title={song?.title} 
-        artist={song?.artist} 
       />
 
       <LyricsDisplay

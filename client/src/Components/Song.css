@@ -5,6 +5,13 @@
     text-align: center;
 }
 
+.song-year {
+    color: #bdbdc0;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+}
+
 .song-artist {
     color: #82c1fd;
     font-style: italic;

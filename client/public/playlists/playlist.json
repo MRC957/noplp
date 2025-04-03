@@ -1,0 +1,115 @@
+{
+  "categories": [
+    {
+      "difficulty": 50,
+      "expected_words": 8,
+      "id": "6f4d6da2-d456-4502-8773-5d64157fc756",
+      "name": "Années 2020"
+    },
+    {
+      "difficulty": 40,
+      "expected_words": 6,
+      "id": "04d047e2-5401-422b-b8d4-8e7c3a02ab41",
+      "name": "Johnny Hallyday"
+    },
+    {
+      "difficulty": 30,
+      "expected_words": 5,
+      "id": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "name": "Disney & films"
+    },
+    {
+      "id": "374990b6-dd82-4c45-8af7-6ce06ca33f26",
+      "name": "C'est du belge !",
+      "difficulty": 20,
+      "expected_words": 3
+    },
+    {
+      "difficulty": 10,
+      "expected_words": 2,
+      "id": "1fbbe6a9-4ae3-43e8-81cb-92fd828ab918",
+      "name": "Fête & Danse"
+    }
+  ],
+  "name": "playlist",
+  "songs": [
+    {
+      "id": "2ne2QYNb5DjByvKPOtzQaM",
+      "track_id": "2ne2QYNb5DjByvKPOtzQaM",
+      "category": "1fbbe6a9-4ae3-43e8-81cb-92fd828ab918",
+      "artist": "Images",
+      "title": "Les démons de minuit"
+    },
+    {
+      "id": "65uoaqX5qcjXZRheAj1qQT",
+      "track_id": "65uoaqX5qcjXZRheAj1qQT",
+      "category": "1fbbe6a9-4ae3-43e8-81cb-92fd828ab918",
+      "artist": "Indila",
+      "title": "Dernière danse"
+    },
+    {
+      "id": "6An1wjpjiQ27KcNjfKSVxD",
+      "track_id": "6An1wjpjiQ27KcNjfKSVxD",
+      "category": "6f4d6da2-d456-4502-8773-5d64157fc756",
+      "artist": "Helena",
+      "title": "Nouveau coeur",
+      "release_year": 2024
+    },
+    {
+      "id": "6e0LjNPkRqxIAlmmdjWSV8",
+      "track_id": "6e0LjNPkRqxIAlmmdjWSV8",
+      "category": "6f4d6da2-d456-4502-8773-5d64157fc756",
+      "artist": "Alizée",
+      "title": "Moi... Lolita",
+      "release_year": 2000
+    },
+    {
+      "id": "57zabaqzfjZVhxJeb0UZsP",
+      "track_id": "57zabaqzfjZVhxJeb0UZsP",
+      "category": "04d047e2-5401-422b-b8d4-8e7c3a02ab41",
+      "artist": "Johnny Hallyday",
+      "title": "L'envie",
+      "release_year": 1986
+    },
+    {
+      "id": "6phMPtxOkjdXR8ax9xoCJ9",
+      "track_id": "6phMPtxOkjdXR8ax9xoCJ9",
+      "category": "04d047e2-5401-422b-b8d4-8e7c3a02ab41",
+      "artist": "Johnny Hallyday",
+      "title": "Le pénitencier",
+      "release_year": 1964
+    },
+    {
+      "id": "2vRKm8OTmxJP1dImXQ8Od3",
+      "track_id": "2vRKm8OTmxJP1dImXQ8Od3",
+      "category": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "artist": "Dimitri Rougeul",
+      "title": "Je Voudrais Déjà Être Roi",
+      "release_year": 2011
+    },
+    {
+      "id": "0JHBh215irY3h3ObwHKKib",
+      "track_id": "0JHBh215irY3h3ObwHKKib",
+      "category": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "artist": "Anthony Kavanagh",
+      "title": "Nuits d'Arabie (2019)",
+      "release_year": null
+    },
+    {
+      "id": "6An1wjpjiQ27KcNjfKSVxD",
+      "track_id": "6An1wjpjiQ27KcNjfKSVxD",
+      "category": "374990b6-dd82-4c45-8af7-6ce06ca33f26",
+      "artist": "Helena",
+      "title": "Nouveau coeur",
+      "release_year": 2024
+    },
+    {
+      "id": "2AMysGXOe0zzZJMtH3Nizb",
+      "track_id": "2AMysGXOe0zzZJMtH3Nizb",
+      "category": "374990b6-dd82-4c45-8af7-6ce06ca33f26",
+      "artist": "Stromae",
+      "title": "Formidable",
+      "release_year": 2013
+    }
+  ]
+}

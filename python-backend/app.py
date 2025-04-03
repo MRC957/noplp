@@ -137,6 +137,10 @@ def get_playlists():
             'id': 'random',
             'name': 'Random Playlist'
         })
+        playlists.append({
+            'id': 'random2',
+            'name': 'Another random Playlist'
+        })
                 
         return jsonify(playlists)
     except Exception as e:
@@ -167,7 +171,7 @@ def get_playlist():
         playlist_name = request.args.get('name', 'playlist')
         
         # Handle request for a random playlist
-        if (playlist_name == 'random'):
+        if (playlist_name in ['random', 'random2']):
             num_categories = int(request.args.get('categories', '5'))
             songs_per_category = int(request.args.get('songs_per_category', '2'))
             
@@ -1025,7 +1029,7 @@ def save_playlist():
             # Keep only necessary song data
             filtered_songs = []
             for song in playlist_data['songs']:
-                filtered_song = {k: song[k] for k in ["id", "track_id", "category", "artist", "title"] if k in song}
+                filtered_song = {k: song[k] for k in ["id", "track_id", "category", "artist", "title", "release_year"] if k in song}
                 filtered_songs.append(filtered_song)
             playlist_data['songs'] = filtered_songs
 
