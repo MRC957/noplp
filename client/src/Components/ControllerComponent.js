@@ -333,44 +333,62 @@ const ControllerComponent = () => {
         const newCategory = state.availableCategories.find(c => c.id === categoryId);
         if (!newCategory) return;
         
-        // Get 2 random songs from this category (if available)
-        fetchSongsForCategory(categoryId);
+        // Show loading indication
+        setState(prevState => ({
+            ...prevState,
+            loadingCategoryChange: true
+        }));
         
-        // Update the playlist with the new category and songs
-        setTimeout(() => {
-            // This timeout ensures that availableSongs has been populated
-            const songsForNewCategory = state.availableSongs.slice(0, 2);
-            
-            // Create updated playlist
-            const updatedPlaylist = {
-                ...state.playlist,
-                categories: state.playlist.categories.map(c => 
-                    c.id === state.changingCategoryId ? 
-                    { ...newCategory, difficulty: oldCategory.difficulty, expected_words: oldCategory.expected_words } : c
-                )
-            };
-            
-            // Update songs: remove old ones for this category and add new ones
-            const songsWithoutOldCategory = state.playlist.songs.filter(s => 
-                s.category !== state.changingCategoryId
-            );
-            
-            const newSongs = songsForNewCategory.map(s => ({
-                ...s,
-                category: categoryId
-            }));
-            
-            updatedPlaylist.songs = [...songsWithoutOldCategory, ...newSongs];
-            
-            // Update state
-            setState(prevState => ({
-                ...prevState,
-                playlist: updatedPlaylist,
-                changingCategoryId: null
-            }));
-            
-            console.log('Updated playlist with new category:', updatedPlaylist);
-        }, 500);
+        // Fetch songs for the new category directly from the API
+        fetch(`http://localhost:4001/api/songs?category_id=${categoryId}`)
+            .then(response => response.json())
+            .then((songsData) => {
+                // Take up to 2 songs from the category (or all if less than 2)
+                const songsForNewCategory = songsData.slice(0, Math.min(2, songsData.length));
+                
+                if (songsForNewCategory.length === 0) {
+                    console.warn(`No songs available for category ${newCategory.name}`);
+                }
+                
+                // Create updated playlist
+                const updatedPlaylist = {
+                    ...state.playlist,
+                    categories: state.playlist.categories.map(c => 
+                        c.id === state.changingCategoryId ? 
+                        { ...newCategory, difficulty: oldCategory.difficulty, expected_words: oldCategory.expected_words } : c
+                    )
+                };
+                
+                // Update songs: remove old ones for this category and add new ones
+                const songsWithoutOldCategory = state.playlist.songs.filter(s => 
+                    s.category !== state.changingCategoryId
+                );
+                
+                const newSongs = songsForNewCategory.map(s => ({
+                    ...s,
+                    category: categoryId
+                }));
+                
+                updatedPlaylist.songs = [...songsWithoutOldCategory, ...newSongs];
+                
+                // Update state
+                setState(prevState => ({
+                    ...prevState,
+                    playlist: updatedPlaylist,
+                    changingCategoryId: null,
+                    loadingCategoryChange: false
+                }));
+                
+                console.log('Updated playlist with new category:', updatedPlaylist);
+            })
+            .catch(error => {
+                console.error(`Error fetching songs for category ${categoryId}:`, error);
+                setState(prevState => ({
+                    ...prevState,
+                    changingCategoryId: null,
+                    loadingCategoryChange: false
+                }));
+            });
     };
 
     const handleSelectNewSong = (songId) => {
