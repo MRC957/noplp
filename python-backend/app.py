@@ -955,7 +955,7 @@ def get_categories_with_songs():
         initialize_database()
         
         with app.app_context():
-            categories = Category.query.all()
+            categories = Category.query.order_by(Category.name).all()
             categories_data = [category.to_dict(include_songs=True) for category in categories]
             return jsonify(categories_data)
     except Exception as e:
@@ -993,7 +993,7 @@ def get_songs_with_categories():
         initialize_database()
         
         with app.app_context():
-            songs = Song.query.all()
+            songs = Song.query.order_by(Song.title).all()
             songs_data = [song.to_dict(include_categories_full=True) for song in songs]
             # Add name field to each song
             for song in songs_data:
