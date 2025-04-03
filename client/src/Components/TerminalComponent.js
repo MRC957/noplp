@@ -4,7 +4,6 @@ import { useAudio } from '../hooks/useAudio';
 import { 
   STATES, 
   // Import both new object-based constants and legacy individual constants
-  LYRICS_STATES,
   STATE_LYRICS_NONE,
   STATE_LYRICS_SUGGESTED,
   STATE_LYRICS_FROZEN,

@@ -10,10 +10,12 @@ export default function Categories({ categories }) {
                     <TextBox 
                         content={category.name} 
                         disabled={category.picked}
+                        // className="category-name"
                     />
                     <TextBox 
                         content={category.difficulty} 
                         disabled={category.picked}
+                        className="category-difficulty"
                     />
                 </div>
             ))}

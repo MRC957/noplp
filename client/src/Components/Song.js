@@ -7,7 +7,6 @@ import "./Song.css";
 
 // Import lyric state constants from the unified constants file
 import {
-  LYRICS_STATES,
   STATE_LYRICS_NONE,
   STATE_LYRICS_SUGGESTED,
   STATE_LYRICS_FROZEN,
@@ -565,14 +564,6 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
         preventRepeatedPauseRef.current = false;
       }, 1500); // Increased delay to ensure player has time to continue
     }
-  };
-
-  // Format time for display (utility function)
-  const formatTime = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   // Helper function to update revealed lyrics

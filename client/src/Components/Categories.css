@@ -19,7 +19,6 @@
     width: 3em;
     min-width: 3em;
     max-width: 3em;
-    font-size: 2.5vw !important;
     padding: 0.3em 0.2em !important;
     flex-shrink: 0;
 }
@@ -27,4 +26,5 @@
 /* Remove bottom margin from the textboxes */
 .category-container .textbox {
     margin-bottom: 0;
+    width: 80%;
 }

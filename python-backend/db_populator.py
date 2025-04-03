@@ -291,11 +291,11 @@ class DatabasePopulator:
             
             # Define difficulty levels for the random playlist
             difficulty_levels = {
-                0: {'difficulty': 10, 'expected_words': 2},
-                1: {'difficulty': 20, 'expected_words': 3},
-                2: {'difficulty': 30, 'expected_words': 4},
-                3: {'difficulty': 40, 'expected_words': 5},
-                4: {'difficulty': 50, 'expected_words': 6}
+                0: {'difficulty': 50, 'expected_words': 8},
+                1: {'difficulty': 40, 'expected_words': 6},
+                2: {'difficulty': 30, 'expected_words': 5},
+                3: {'difficulty': 20, 'expected_words': 3},
+                4: {'difficulty': 10, 'expected_words': 2},
             }
             
             # Add categories and their songs to the playlist
