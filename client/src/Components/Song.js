@@ -1,3 +1,29 @@
+/**
+ * Song Component
+ * 
+ * This is the core component for displaying and controlling a song in the karaoke application.
+ * It handles:
+ * - Integration with Spotify for music playback
+ * - Synchronized lyrics display with the current playback position
+ * - Pausing at specific times for lyrics guessing
+ * - Managing different states of the lyrics guessing game
+ * - Background music during guessing phases
+ * - Recovering from errors and visibility changes
+ * 
+ * The component maintains complex state to coordinate between the music player,
+ * lyrics display, and game mechanics.
+ * 
+ * @param {Object} props - Component props
+ * @param {Object} props.song - Song data object with title, artist, id, etc.
+ * @param {Function} props.colorFlash - Function to trigger background color effects
+ * @param {Function} props.jukebox - Function to play sound effects and background music
+ * @param {Object} props.suggestedLyrics - Current state of user's lyric suggestion
+ * @param {Array} props.lyrics - Full lyrics for the song with timing information
+ * @param {Array} props.lyricsToGuess - Specific lyrics that need to be guessed
+ * @param {boolean} props.lyricsLoading - Whether lyrics are currently being loaded
+ * @param {string} props.lyricsError - Error message if lyrics failed to load
+ * @returns {JSX.Element} The song player with lyrics display
+ */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { emitEvent } from "../hooks/socketManager";
 import SpotifyPlayer from "./SpotifyPlayer";
@@ -18,24 +44,24 @@ import {
 const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsToGuess = [], lyricsLoading = false, lyricsError = null }) => {
   // Player and audio states
   const [playerState, setPlayerState] = useState({
-    playerReady: false,
-    playerVisible: false,
-    audioReady: false,
-    errorMessage: null,
-    currentTime: 0,
-    pausedForGuessing: false,
+    playerReady: false,      // Whether Spotify API is loaded and ready
+    playerVisible: false,    // Whether player is visible in the UI
+    audioReady: false,       // Whether audio track is loaded and ready to play
+    errorMessage: null,      // Error message if player failed to load
+    currentTime: 0,          // Current playback position in milliseconds
+    pausedForGuessing: false, // Whether playback is paused for lyric guessing
   });
 
   // Lyrics states
   const [lyricsState, setLyricsState] = useState({
-    lyricsReady: false,
-    lyrics: [],             // Lyrics data provided by ControllerComponent
-    lyricsToGuess: [],      // Lyrics to guess provided by ControllerComponent
-    currentLine: -1,
-    currentLyricIndex: -1,
-    lyricsLoading: false,
-    lyricsError: null,
-    revealedLyrics: [],     // Track revealed lyrics to avoid pausing for them again
+    lyricsReady: false,      // Whether lyrics data is loaded and ready
+    lyrics: [],              // Lyrics data provided by ControllerComponent
+    lyricsToGuess: [],       // Lyrics to guess provided by ControllerComponent
+    currentLine: -1,         // Current line in lyrics data (legacy)
+    currentLyricIndex: -1,   // Index of the current lyric line
+    lyricsLoading: false,    // Whether lyrics are being loaded
+    lyricsError: null,       // Error message if lyrics failed to load
+    revealedLyrics: [],      // Track revealed lyrics to avoid pausing for them again
   });
 
   // Track pending song load
@@ -55,13 +81,13 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
   }, [playerState]);
 
   // Additional refs for song handling
-  const spotifyPlayerRef = useRef();
-  const musicBedTimeoutRef = useRef(null);
-  const pauseOffsetRef = useRef(500);
+  const spotifyPlayerRef = useRef();             // Reference to the SpotifyPlayer component
+  const musicBedTimeoutRef = useRef(null);       // Timeout for starting background music
+  const pauseOffsetRef = useRef(500);            // How early to pause before lyrics (milliseconds)
   const preventRepeatedPauseRef = useRef(false); // Prevent immediate re-pause
-  const hasInitializedRef = useRef(false); // Track if the current song has been initialized
-  const cleanupInProgressRef = useRef(false); // Track if cleanup is in progress
-  const isVisibleRef = useRef(false); // Track if the component is currently visible
+  const hasInitializedRef = useRef(false);       // Track if the current song has been initialized
+  const cleanupInProgressRef = useRef(false);    // Track if cleanup is in progress
+  const isVisibleRef = useRef(false);            // Track if the component is currently visible
   
   // Track the previous lyrics state to detect changes
   const previousLyricStateRef = useRef(STATE_LYRICS_NONE);
@@ -69,7 +95,12 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
   // Store the previous song ID to detect changes
   const previousSongIdRef = useRef(null);
 
-  // Check if the component is currently visible (not display:none)
+  /**
+   * Check if the component is currently visible in the DOM
+   * Used to handle visibility changes when switching between screens
+   * 
+   * @returns {boolean} Whether the component is visible
+   */
   const checkVisibility = () => {
     return window.getComputedStyle(spotifyPlayerRef.current?.parentNode?.parentNode || document.body).display !== 'none';
   };
@@ -120,7 +151,12 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }
   }, [suggestedLyrics?.state, jukebox, song]);
 
-  // Function to check if the suggested lyrics are correct
+  /**
+   * Check if the user's suggested lyrics match the correct lyrics
+   * This is used for validation when the user submits their guess
+   * 
+   * @returns {boolean} Whether the suggested lyrics are correct
+   */
   const checkIfLyricsAreCorrect = () => {
     if (!suggestedLyrics || !suggestedLyrics.content || !lyricsState.lyricsToGuess.length) {
       return false;
@@ -144,7 +180,10 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     return suggestedWords === correctWords;
   };
 
-  // Load the Spotify iframe API - added to fix the undefined reference
+  /**
+   * Load the Spotify iframe API - now a stub since this is handled by SpotifyPlayer
+   * Kept for backward compatibility
+   */
   const loadSpotifyIframeApi = () => {
     // Since we're now using the SpotifyPlayer component, this is just a stub
     // The actual implementation is in the SpotifyPlayer component
@@ -341,7 +380,11 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }
   }, [isVisibleRef.current, playerState.playerReady, playerState.audioReady, lyricsState.lyricsReady]);
 
-  // Comprehensive cleanup function
+  /**
+   * Comprehensive cleanup function to reset state, clear timeouts, and stop sounds
+   * 
+   * @param {boolean} isComponentUnmount - Whether this is being called during component unmount
+   */
   const cleanupSong = (isComponentUnmount = false) => {
     // Prevent concurrent cleanup operations
     if (cleanupInProgressRef.current) return;
@@ -394,7 +437,11 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     cleanupInProgressRef.current = false;
   };
 
-  // Handler for Spotify player ready event
+  /**
+   * Handle Spotify player ready event
+   * 
+   * @param {boolean} isReady - Whether the Spotify player is ready
+   */
   const handlePlayerReady = (isReady) => {
     console.log('Spotify player ready:', isReady);
     setPlayerState(prev => ({ 
@@ -404,7 +451,11 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }));
   };
 
-  // Handler for Spotify audio ready event
+  /**
+   * Handle Spotify audio ready event (track loaded)
+   * 
+   * @param {boolean} isReady - Whether the audio track is ready for playback
+   */
   const handleAudioReady = (isReady) => {
     console.log('Spotify audio ready:', isReady);
     setPlayerState(prev => ({ 
@@ -414,13 +465,22 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }));
   };
 
-  // Handler for Spotify playback updates
+  /**
+   * Handle playback position updates from Spotify player
+   * 
+   * @param {number} position - Current position in milliseconds
+   * @param {Object} controller - Spotify player controller instance
+   */
   const handlePlaybackUpdate = (position, controller) => {
     setPlayerState(prev => ({ ...prev, currentTime: position }));
     updateDisplayedLyrics(position, controller);
   };
 
-  // Handler for Spotify player errors
+  /**
+   * Handle errors from Spotify player
+   * 
+   * @param {string} errorMessage - Error message from Spotify player
+   */
   const handlePlayerError = (errorMessage) => {
     setPlayerState(prev => ({ 
       ...prev, 
@@ -430,7 +490,13 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }));
   };
 
-  // Update displayed lyrics based on current time
+  /**
+   * Update displayed lyrics based on current playback position
+   * Handles pausing at specific points for lyric guessing
+   * 
+   * @param {number} position - Current position in milliseconds
+   * @param {Object} controller - Spotify player controller instance
+   */
   const updateDisplayedLyrics = (position, controller) => {
     // Use the refs to get the latest state
     const { lyrics, currentLyricIndex, lyricsToGuess, revealedLyrics } = lyricsStateRef.current;
@@ -507,7 +573,10 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }
   };
 
-  // Start playing the song
+  /**
+   * Start playing the current song
+   * Only plays if all necessary conditions are met
+   */
   const startPlaying = () => {
     if (!playerState.audioReady || !lyricsState.lyricsReady || !isVisibleRef.current) {
       return;
@@ -528,7 +597,10 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }
   };
 
-  // Resume playback after lyrics reveal
+  /**
+   * Resume playback after lyrics guessing
+   * Stops background music and continues song playback
+   */
   const resumePlayback = () => {
     if (playerStateRef.current.pausedForGuessing) {
       console.log("Resuming playback after lyrics reveal");
@@ -566,7 +638,10 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     }
   };
 
-  // Helper function to update revealed lyrics
+  /**
+   * Add the current lyric to the revealed lyrics array
+   * This prevents pausing at the same lyric again
+   */
   const updateRevealedLyrics = () => {
     if (lyricsState.currentLyricIndex >= 0) {
       const currentLyric = lyricsState.lyrics[lyricsState.currentLyricIndex];

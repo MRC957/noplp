@@ -1,3 +1,26 @@
+/**
+ * SpotifyPlayer Component
+ * 
+ * A React component that integrates the Spotify Web Playback SDK for playing music tracks.
+ * This component handles:
+ * - Loading the Spotify Iframe API
+ * - Creating and managing a Spotify player
+ * - Playing, pausing, and resuming tracks
+ * - Monitoring playback updates
+ * - Error handling and recovery
+ * 
+ * The component uses React's forwardRef and useImperativeHandle to expose control methods
+ * to parent components, allowing them to control playback.
+ * 
+ * @param {Object} props - Component props
+ * @param {string} props.trackId - Spotify track ID to play
+ * @param {Function} props.onPlayerReady - Callback when Spotify API is loaded and ready
+ * @param {Function} props.onAudioReady - Callback when a specific track is ready to play
+ * @param {Function} props.onPlaybackUpdate - Callback with current playback position updates
+ * @param {Function} props.onError - Callback when errors occur in the player
+ * @param {React.Ref} ref - Forwarded ref to expose player control methods
+ * @returns {JSX.Element} A container div for the Spotify player iframe
+ */
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import "./Song.css";
 
@@ -12,19 +35,20 @@ const SpotifyPlayer = forwardRef(({
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   
   // References
-  const spotifyApiRef = useRef(null);
-  const spotifyControllerRef = useRef(null);
-  const playerContainerRef = useRef(null);
-  const pendingTrackIdRef = useRef(null);
-  const currentTrackIdRef = useRef(null);
-  const apiLoadingRef = useRef(false);
-  const playerReinitiateTimeoutRef = useRef(null);
+  const spotifyApiRef = useRef(null);         // Reference to the Spotify API
+  const spotifyControllerRef = useRef(null);  // Reference to the player controller
+  const playerContainerRef = useRef(null);    // Reference to the DOM element containing the player
+  const pendingTrackIdRef = useRef(null);     // Track ID waiting to be loaded
+  const currentTrackIdRef = useRef(null);     // Currently loaded track ID
+  const apiLoadingRef = useRef(false);        // Flag to prevent duplicate API loading
+  const playerReinitiateTimeoutRef = useRef(null); // Timeout reference for player initialization
 
   // Load Spotify iframe API on mount
   useEffect(() => {
     console.log('SpotifyPlayer mounted, loading API');
     loadSpotifyIframeApi();
     
+    // Clean up on unmount
     return () => {
       // Clear any pending timeouts
       if (playerReinitiateTimeoutRef.current) {
@@ -76,7 +100,10 @@ const SpotifyPlayer = forwardRef(({
     }
   }, [trackId, isApiLoaded]);
 
-  // Load the Spotify iframe API
+  /**
+   * Load the Spotify iframe API script
+   * This adds the script to the document and sets up a callback for when it's ready
+   */
   const loadSpotifyIframeApi = () => {
     // Avoid repeated loading
     if (spotifyApiRef.current || apiLoadingRef.current || window.onSpotifyIframeApiReady) {
@@ -108,7 +135,11 @@ const SpotifyPlayer = forwardRef(({
     }
   };
 
-  // Create player container and load track
+  /**
+   * Create a Spotify player and load the specified track
+   * 
+   * @param {string} trackId - Spotify track ID to load
+   */
   const createPlayerAndLoad = (trackId) => {
     console.log(`Creating player for track: ${trackId}`);
     
@@ -174,7 +205,12 @@ const SpotifyPlayer = forwardRef(({
     }
   };
 
-  // Create player container
+  /**
+   * Create a new player container element
+   * Clears any existing player and creates a new container for the Spotify iframe
+   * 
+   * @returns {boolean} True if container was created successfully, false otherwise
+   */
   const createPlayerContainer = () => {
     const parentContainer = playerContainerRef.current;
     if (!parentContainer) {
@@ -195,7 +231,10 @@ const SpotifyPlayer = forwardRef(({
     return true;
   };
 
-  // Player control methods
+  /**
+   * Start playback of the current track
+   * Logs errors if the player is not ready
+   */
   const play = () => {
     if (!spotifyControllerRef.current) {
       console.warn("Cannot play: Spotify controller not initialized");
@@ -209,6 +248,9 @@ const SpotifyPlayer = forwardRef(({
     }
   };
 
+  /**
+   * Pause playback of the current track
+   */
   const pause = () => {
     if (!spotifyControllerRef.current) return;
     try {
@@ -218,6 +260,9 @@ const SpotifyPlayer = forwardRef(({
     }
   };
 
+  /**
+   * Resume playback of a paused track
+   */
   const resume = () => {
     if (!spotifyControllerRef.current) {
       console.warn("Cannot resume: Spotify controller not initialized");
@@ -231,7 +276,10 @@ const SpotifyPlayer = forwardRef(({
     }
   };
 
-  // Cleanup function - ensure proper teardown of player
+  /**
+   * Clean up the player when switching tracks or unmounting
+   * Destroys the controller and removes the player from the DOM
+   */
   const cleanupPlayer = () => {
     console.log("Cleaning up Spotify player");
     

@@ -1,3 +1,18 @@
+/**
+ * TerminalComponent
+ * 
+ * The main display component for the karaoke application that handles different game states.
+ * This component manages:
+ * - Navigation between different screens (intro, categories, song lists, songs)
+ * - Socket communication with the controller
+ * - Sound effects and background animations
+ * - Lyrics display and interaction states
+ * 
+ * The component maintains a Song component even when displaying other screens to avoid
+ * recreating the Spotify player, which improves performance and user experience.
+ * 
+ * @returns {JSX.Element} The main terminal interface with dynamic content based on game state
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { useSocket } from '../hooks/useSocket';
 import { useAudio } from '../hooks/useAudio';
@@ -18,6 +33,10 @@ import Song from "./Song";
 import SongList from "./SongList";
 import './TerminalComponent.css';
 
+/**
+ * Map of sound effects to play for different application states
+ * Each state can have an associated sound that plays when entering that state
+ */
 const COMPONENT_SOUNDS = {
   [STATES.INTRO]: 'intro',
   [STATES.SONGLIST]: 'bed',
@@ -40,23 +59,23 @@ const TerminalComponent = () => {
   
   // Track UI state properties
   const [uiState, setUiState] = useState({
-    backgroundType: '',
-    perfMode: false,
-    payload: {},
+    backgroundType: '',      // Background animation type
+    perfMode: false,         // Performance mode (simplified visuals)
+    payload: {},             // Data for the current screen
   });
   
   // Track lyrics state separately
   const [suggestedLyrics, setSuggestedLyrics] = useState({
-    content: '',
-    state: STATE_LYRICS_NONE,
+    content: '',             // Text content of suggested lyrics
+    state: STATE_LYRICS_NONE, // Current state of lyrics interaction
   });
 
   // Store lyrics data that will be passed to the Song component
   const [lyricsData, setLyricsData] = useState({
-    lyrics: [],
-    lyricsToGuess: [],
-    lyricsLoading: false,
-    lyricsError: null
+    lyrics: [],              // All lyrics for the current song
+    lyricsToGuess: [],       // Lyrics that need to be guessed
+    lyricsLoading: false,    // Whether lyrics are being loaded
+    lyricsError: null        // Error message if lyrics failed to load
   });
 
   // Store previous song id to detect song changes
@@ -65,10 +84,19 @@ const TerminalComponent = () => {
   const { socket } = useSocket();
   const { playSound, stopAllSounds } = useAudio();
 
+  /**
+   * Trigger a background color flash animation
+   * @param {string} color - The color to flash in the background
+   */
   const handleFlashColor = (color) => {
     setUiState(prev => ({ ...prev, backgroundType: color }));
   };
 
+  /**
+   * Switch to a different application state/screen
+   * @param {string} action - The state to switch to (from STATES constant)
+   * @param {Object} payload - Data needed for the new state
+   */
   const switchTo = (action, payload = {}) => {
     console.log(`Switching to ${action}`, payload);
     
@@ -121,6 +149,11 @@ const TerminalComponent = () => {
     }
   };
 
+  /**
+   * Handle changes to the lyrics guessing state
+   * @param {string} lyricsState - The lyrics state to switch to
+   * @param {string} payload - Content for suggested lyrics (only used for STATE_LYRICS_SUGGESTED)
+   */
   const handleSuggestedLyrics = (lyricsState, payload = '') => {
     // Use ref to get the most up-to-date state value
     if (currentStateRef.current !== STATES.SONG) {
@@ -147,6 +180,7 @@ const TerminalComponent = () => {
     // Clean up previous listeners first to avoid duplicates
     socket.removeAllListeners();
 
+    // Navigation events
     socket.on('to-intro', () => {
       switchTo(STATES.INTRO);
     });
@@ -163,6 +197,7 @@ const TerminalComponent = () => {
       switchTo(STATES.CATEGORIES, data);
     });
 
+    // Lyrics interaction events
     socket.on('show-suggested-lyrics', data => {
       handleSuggestedLyrics(STATE_LYRICS_SUGGESTED, data);
     });
@@ -187,7 +222,7 @@ const TerminalComponent = () => {
       setUiState(prev => ({ ...prev, perfMode: data }));
     });
 
-    // New socket listeners for lyrics data
+    // Lyrics data events
     socket.on('lyrics-data', (data) => {
       setLyricsData({
         lyrics: data.lyrics || [],
@@ -212,7 +247,7 @@ const TerminalComponent = () => {
       }));
     });
 
-    // New socket listener for lyrics-to-guess-updated event
+    // Event for updating lyrics to guess without changing the whole song
     socket.on('lyrics-to-guess-updated', (data) => {
       console.log('Received updated lyrics to guess:', data);
       setLyricsData(prev => ({
@@ -238,8 +273,13 @@ const TerminalComponent = () => {
     }
   }, [suggestedLyrics]);
 
-  // Keep a song component instance mounted even when displaying other components
-  // This prevents the Spotify iFrame from being destroyed and recreated
+  /**
+   * Render the appropriate component based on current application state
+   * Always keeps the Song component mounted (hidden when not active) to prevent
+   * Spotify player from being destroyed and recreated
+   * 
+   * @returns {JSX.Element} The component for the current application state
+   */
   const renderContent = () => {
     // Always render the Song component regardless of state
     const songComponent = (

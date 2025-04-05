@@ -1,3 +1,20 @@
+/**
+ * ControllerComponent
+ * 
+ * This is the main administrative interface for the karaoke application.
+ * It serves as the control panel for the game host to:
+ * - Select and manage playlists
+ * - Navigate between intro, categories, and song screens
+ * - Control the lyrics guessing game (propose, freeze, validate, reveal)
+ * - Change categories and songs dynamically
+ * - Save custom playlists
+ * - Select specific lyrics for guessing
+ * 
+ * The component communicates with both the server API and the display
+ * screens through socket connections to control the game flow.
+ * 
+ * @returns {JSX.Element} The controller interface
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { getSocket, emitEvent, controllerSocket } from "../hooks/socketManager";
 import PlaylistSelector from "./PlaylistSelector/PlaylistSelector";
@@ -7,33 +24,37 @@ import Category from "./Category/Category";
 import './ControllerComponent.css';
 
 const ControllerComponent = () => {
+    // Main application state
     const [state, setState] = useState({
-        playlist: {},
-        perfMode: false,
-        pickedSongs: [],
-        pickedCategories: [],
-        proposedLyrics: '',
-        expectedWords: 0,
-        trackId: '',
-        songResults: {},
-        availablePlaylists: [],
-        currentPlaylist: 'playlist',
-        newPlaylistName: '',
-        showSavePlaylist: false,
-        // New state variables for category and song selection
-        changingCategoryId: null,
-        changingSongId: null,
-        availableCategories: [],
-        availableSongs: [],
-        // New state variables for lyrics selection
-        currentSongId: null,
-        allLyrics: [],
-        lyricsToGuess: [],
-        selectedLyricIndex: -1,
-        showLyricsSelector: false,
-        lyricsLoading: false
+        playlist: {},             // Current playlist data
+        perfMode: false,          // Performance mode flag
+        pickedSongs: [],          // Songs that have been selected/played
+        pickedCategories: [],     // Categories that have been selected
+        proposedLyrics: '',       // Current lyrics suggestion
+        expectedWords: 0,         // Expected word count for current lyric
+        trackId: '',              // Current Spotify track ID
+        songResults: {},          // Results of lyric guesses by song ID
+        availablePlaylists: [],   // List of available playlists
+        currentPlaylist: 'playlist', // Currently selected playlist
+        newPlaylistName: '',      // Name for saving playlist
+        showSavePlaylist: false,  // Whether to show save playlist UI
+        
+        // Category and song selection state
+        changingCategoryId: null, // ID of category being changed
+        changingSongId: null,     // ID of song being changed
+        availableCategories: [],  // List of all available categories
+        availableSongs: [],       // List of songs available for selection
+        
+        // Lyrics selection state
+        currentSongId: null,      // Current song for lyric selection
+        allLyrics: [],            // All lyrics for current song
+        lyricsToGuess: [],        // Lyrics marked for guessing
+        selectedLyricIndex: -1,   // Index of selected lyric
+        showLyricsSelector: false, // Whether to show lyrics selector
+        lyricsLoading: false      // Whether lyrics are loading
     });
 
+    // Refs for DOM elements and socket connection
     const proposedLyricsRef = useRef(null);
     const socket = useRef(null);
 
@@ -82,7 +103,10 @@ const ControllerComponent = () => {
         loadPlaylist(state.currentPlaylist);
     }, [state.currentPlaylist]);
 
-    // Fetch available playlists from the server
+    /**
+     * Fetch available playlists from the server
+     * Updates the availablePlaylists state with the list of playlists
+     */
     const fetchPlaylists = () => {
         fetch('http://localhost:4001/api/playlists')
             .then(response => response.json())
@@ -98,7 +122,11 @@ const ControllerComponent = () => {
             });
     };
 
-    // Load the selected playlist
+    /**
+     * Load a specific playlist from the server
+     * 
+     * @param {string} playlistName - The name of the playlist to load
+     */
     const loadPlaylist = (playlistName) => {
         fetch(`http://localhost:4001/api/playlist?name=${playlistName}`)
             .then(response => response.json())
@@ -114,7 +142,11 @@ const ControllerComponent = () => {
             });
     };
 
-    // Handle playlist change
+    /**
+     * Handle playlist selection change
+     * 
+     * @param {Object} event - The change event from the dropdown
+     */
     const handlePlaylistChange = (event) => {
         const selectedPlaylist = event.target.value;
         setState(prevState => ({
@@ -127,6 +159,10 @@ const ControllerComponent = () => {
         }));
     };
 
+    /**
+     * Reset the game state
+     * Clears picked songs, categories, and results
+     */
     const handleReset = () => {
         console.log('Reseting');
         setState(prevState => ({
@@ -138,10 +174,18 @@ const ControllerComponent = () => {
         }));
     };
 
+    /**
+     * Navigate to the intro screen
+     * Uses the controllerSocket to change the display
+     */
     const handleToIntro = () => {
         controllerSocket.showIntro();
     };
 
+    /**
+     * Navigate to the categories screen
+     * Prepares category data and uses controllerSocket to update the display
+     */
     const handleToCategories = () => {
         const categories = state.playlist.categories?.map(c => {
             return {
@@ -153,6 +197,12 @@ const ControllerComponent = () => {
         controllerSocket.showCategories(categories);
     };
 
+    /**
+     * Navigate to the song list screen
+     * Optionally marks a category as picked and filters songs by category
+     * 
+     * @param {string} categoryId - The ID of the selected category, undefined for all songs
+     */
     const handleToSongList = (categoryId) => {
         console.log(categoryId);
         if (categoryId) {
@@ -182,6 +232,12 @@ const ControllerComponent = () => {
         });
     };
 
+    /**
+     * Navigate to the song screen and start playing a specific song
+     * Marks the song as picked and fetches its lyrics
+     * 
+     * @param {string} id - The ID of the selected song
+     */
     const handleToSong = (id) => {
         setState(prevState => ({
             ...prevState,
@@ -213,7 +269,12 @@ const ControllerComponent = () => {
         }
     };
 
-    // New function to fetch and send lyrics to the TerminalComponent
+    /**
+     * Fetch lyrics for a song and send them to the TerminalComponent
+     * Handles loading state and error handling
+     * 
+     * @param {Object} song - The song object containing track_id
+     */
     const fetchAndSendLyrics = (song) => {
         const trackId = song.track_id;
         const wordCount = song.expected_words || 0;
@@ -246,11 +307,21 @@ const ControllerComponent = () => {
             });
     };
 
+    /**
+     * Handle lyrics proposal from the controller
+     * Sends the proposed lyrics to the TerminalComponent
+     * 
+     * @param {string} lyrics - The lyrics proposed by the host
+     */
     const handleProposeLyrics = (lyrics) => {
         console.log('propose Lyrics', lyrics);
         controllerSocket.proposeLyrics(lyrics);
     };
     
+    /**
+     * Freeze the currently proposed lyrics
+     * Clears the input field and sends freeze command to TerminalComponent
+     */
     const handleLyricsFreeze = () => {
         if (proposedLyricsRef.current) {
             proposedLyricsRef.current.value = '';
@@ -258,19 +329,34 @@ const ControllerComponent = () => {
         controllerSocket.freezeLyrics();
     };
 
+    /**
+     * Validate the currently frozen lyrics
+     * Sends validation command to TerminalComponent
+     */
     const handleLyricsValidate = () => { 
         controllerSocket.validateLyrics();
     };
 
+    /**
+     * Reveal the correct lyrics
+     * Sends reveal command to TerminalComponent
+     */
     const handleLyricsReveal = () => {
         controllerSocket.revealLyrics();
     };
 
+    /**
+     * Continue playback after lyric guessing
+     * Sends continue command to TerminalComponent
+     */
     const handleLyricsContinue = () => {
         controllerSocket.continueLyrics();
     };
 
-    // Functions to handle category and song changes
+    /**
+     * Fetch all available categories from the server
+     * Updates the availableCategories state
+     */
     const fetchAllCategories = () => {
         fetch('http://localhost:4001/api/categories')
             .then(response => response.json())
@@ -286,6 +372,12 @@ const ControllerComponent = () => {
             });
     };
 
+    /**
+     * Fetch all songs for a specific category
+     * Updates the availableSongs state
+     * 
+     * @param {string} categoryId - The ID of the category to fetch songs for
+     */
     const fetchSongsForCategory = (categoryId) => {
         fetch(`http://localhost:4001/api/songs?category_id=${categoryId}`)
             .then(response => response.json())
@@ -301,6 +393,12 @@ const ControllerComponent = () => {
             });
     };
 
+    /**
+     * Handle category change request
+     * Fetches available categories and sets the changingCategoryId
+     * 
+     * @param {string} categoryId - The ID of the category to change
+     */
     const handleChangeCategory = (categoryId) => {
         // Fetch all available categories
         fetchAllCategories();
@@ -311,6 +409,13 @@ const ControllerComponent = () => {
         }));
     };
 
+    /**
+     * Handle song change request
+     * Fetches available songs for the category and sets the changingSongId
+     * 
+     * @param {string} songId - The ID of the song to change
+     * @param {string} categoryId - The ID of the category the song belongs to
+     */
     const handleChangeSong = (songId, categoryId) => {
         // Fetch all available songs for this category
         fetchSongsForCategory(categoryId);
@@ -321,6 +426,12 @@ const ControllerComponent = () => {
         }));
     };
 
+    /**
+     * Handle selection of a new category
+     * Updates the playlist with the new category and its songs
+     * 
+     * @param {string} categoryId - The ID of the newly selected category
+     */
     const handleSelectNewCategory = (categoryId) => {
         // Update the playlist with the new category
         if (!categoryId || !state.changingCategoryId) return;
@@ -391,6 +502,12 @@ const ControllerComponent = () => {
             });
     };
 
+    /**
+     * Handle selection of a new song
+     * Updates the playlist with the new song
+     * 
+     * @param {string} songId - The ID of the newly selected song
+     */
     const handleSelectNewSong = (songId) => {
         if (!songId || !state.changingSongId) return;
         
@@ -419,9 +536,13 @@ const ControllerComponent = () => {
         }));
         
         console.log('Updated playlist with new song:', updatedPlaylist);
-            };
+    };
 
-    // Save current playlist with new name
+    /**
+     * Save the current playlist with a new name
+     * 
+     * @param {string} newPlaylistName - The name to save the playlist as
+     */
     const handleSavePlaylist = (newPlaylistName) => {
         if (!newPlaylistName.trim()) {
             alert("Please enter a valid playlist name");
@@ -467,7 +588,13 @@ const ControllerComponent = () => {
         });
     };
 
-    // Lyrics management functions
+    /**
+     * Fetch lyrics for a specific song
+     * Updates the allLyrics state and shows the lyrics selector
+     * 
+     * @param {string} songId - The ID of the song to fetch lyrics for
+     * @param {string} trackId - The Spotify track ID
+     */
     const fetchLyricsForSong = (songId, trackId) => {
         if (!trackId) return;
                 
@@ -487,11 +614,11 @@ const ControllerComponent = () => {
                 return response.json();
             })
             .then(data => {
-                                setState(prevState => ({
+                setState(prevState => ({
                     ...prevState,
                     allLyrics: data.lyrics || [],
                     lyricsToGuess: data.lyricsToGuess || [],
-                                        lyricsLoading: false,
+                    lyricsLoading: false,
                     showLyricsSelector: true
                 }));
                 console.log('Fetched lyrics:', data);
@@ -506,6 +633,12 @@ const ControllerComponent = () => {
             });
     };
 
+    /**
+     * Toggle the lyrics selector for a song
+     * Either shows/hides the selector or fetches new lyrics
+     * 
+     * @param {string} songId - The ID of the song to toggle lyrics for
+     */
     const handleToggleLyricsSelector = (songId) => {
         const song = songList.find(s => s.id === songId);
         if (!song) return;
@@ -523,6 +656,12 @@ const ControllerComponent = () => {
         fetchLyricsForSong(songId, song.track_id);
     };
 
+    /**
+     * Handle selection of a specific lyric to use for guessing
+     * Updates the song in the playlist with the new lyric information
+     * 
+     * @param {number} index - The index of the selected lyric in allLyrics
+     */
     const handleSelectLyricToGuess = (index) => {
         if (index < 0 || index >= state.allLyrics.length) return;
         
@@ -574,7 +713,7 @@ const ControllerComponent = () => {
         }
     };
 
-    // Render logic
+    // Prepare data for rendering
     const songList = state.playlist.songs || [];
     const categories = (state.playlist.categories || []).map(c => {
         return {
@@ -583,6 +722,7 @@ const ControllerComponent = () => {
         };
     });
 
+    // Create category components with their songs
     const categoriesElements = categories.map(cat => {
         return (
             <Category
