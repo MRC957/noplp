@@ -419,7 +419,7 @@ const ControllerComponent = () => {
         }));
         
         console.log('Updated playlist with new song:', updatedPlaylist);
-    };
+            };
 
     // Save current playlist with new name
     const handleSavePlaylist = (newPlaylistName) => {
@@ -470,7 +470,7 @@ const ControllerComponent = () => {
     // Lyrics management functions
     const fetchLyricsForSong = (songId, trackId) => {
         if (!trackId) return;
-        
+                
         setState(prevState => ({
             ...prevState,
             lyricsLoading: true,
@@ -487,11 +487,11 @@ const ControllerComponent = () => {
                 return response.json();
             })
             .then(data => {
-                setState(prevState => ({
+                                setState(prevState => ({
                     ...prevState,
                     allLyrics: data.lyrics || [],
                     lyricsToGuess: data.lyricsToGuess || [],
-                    lyricsLoading: false,
+                                        lyricsLoading: false,
                     showLyricsSelector: true
                 }));
                 console.log('Fetched lyrics:', data);

@@ -1,3 +1,23 @@
+/**
+ * LyricsSelector Component
+ * 
+ * A panel that allows users to manually select specific lyrics to use for guessing.
+ * This component displays a list of available lyrics for a song, showing the timestamp,
+ * content, and word count for each lyric. The user can click on a lyric to select it.
+ * 
+ * The component is conditionally rendered based on the "show" prop and displays a 
+ * loading indicator when lyrics are being fetched.
+ * 
+ * @param {Object} props - Component props
+ * @param {boolean} props.show - Controls whether the selector panel is visible
+ * @param {string} props.songId - ID of the current song
+ * @param {Array} props.allLyrics - Array of all available lyrics for the song
+ * @param {number} props.selectedLyricIndex - Index of the currently selected lyric
+ * @param {boolean} props.isLoading - Whether lyrics are currently being loaded
+ * @param {Function} props.onLyricSelect - Handler function called when a lyric is selected
+ * @param {Function} props.onClose - Handler function called when the panel is closed
+ * @returns {JSX.Element|null} A panel with selectable lyrics or null if not shown
+ */
 import React from 'react';
 import './LyricsSelector.css';
 
@@ -10,6 +30,7 @@ const LyricsSelector = ({
     onLyricSelect,
     onClose
 }) => {
+    // Don't render anything if the panel shouldn't be shown
     if (!show) return null;
 
     return (
@@ -27,6 +48,7 @@ const LyricsSelector = ({
                 </button>
             </div>
             
+            {/* Show appropriate content based on loading state and available lyrics */}
             {isLoading ? (
                 <div className="lyrics-loading">Loading lyrics...</div>
             ) : allLyrics.length === 0 ? (
@@ -34,7 +56,7 @@ const LyricsSelector = ({
             ) : (
                 <div className="lyrics-list">
                     {allLyrics.map((lyric, index) => {
-                        // Format the time for display
+                        // Format the time for display (convert from milliseconds to mm:ss format)
                         const timeInSeconds = Math.floor(lyric.startTimeMs / 1000);
                         const minutes = Math.floor(timeInSeconds / 60);
                         const seconds = timeInSeconds % 60;

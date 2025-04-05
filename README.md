@@ -29,3 +29,4 @@ TODO:
 - package application
 
 - improve DB manager performances
+- Bug in ControllerComponent if 1 song in 2 categories -> 1 cat with 11 song and 1 cat with 3 songs
