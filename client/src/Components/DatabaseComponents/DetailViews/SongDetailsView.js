@@ -233,10 +233,14 @@ const SongDetailsView = ({
       <h1>Song Details</h1>
       {currentSong ? (
         <div>
-          <h3>{currentSong.title} by {currentSong.artist}</h3>
+          <h2>{currentSong.title} by {currentSong.artist}</h2>
+          <p>Release year: {currentSong.release_year}</p>
           <p>ID: {currentSong.id}</p>
+          <div className="section-separator">
+            <hr />
+          </div>          
           <div className="song-categories">
-            <h3>Categories:</h3>
+            <h2>Categories:</h2>
             {isRefreshing ? (
               <p>Refreshing categories...</p>
             ) : currentSong.categories?.length > 0 ? (

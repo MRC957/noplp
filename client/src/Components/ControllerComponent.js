@@ -298,6 +298,39 @@ const ControllerComponent = () => {
             })
             .then(data => {
                 console.log('Fetched lyrics for terminal:', data);
+                
+                // Update the song in the playlist with the lyric time from the backend
+                // Only if there are lyrics to guess and no previous selection exists
+                if (data.lyricsToGuess && data.lyricsToGuess.length > 0) {
+                    const backendSelectedLyric = data.lyricsToGuess[0];
+                    
+                    // If the song doesn't have a selected_lyric_time or if it's different from what the backend returned
+                    if (!specificLyricTime || specificLyricTime !== backendSelectedLyric.startTimeMs) {
+                        setState(prevState => {
+                            // Create an updated playlist with the new lyrics time
+                            const updatedPlaylist = {
+                                ...prevState.playlist,
+                                songs: prevState.playlist.songs.map(s => 
+                                    s.id === song.id ? 
+                                    { 
+                                        ...s, 
+                                        selected_lyric_time: backendSelectedLyric.startTimeMs,
+                                        expected_words: backendSelectedLyric.word_count || wordCount
+                                    } : s
+                                )
+                            };
+                            
+                            return {
+                                ...prevState,
+                                playlist: updatedPlaylist,
+                                expectedWords: backendSelectedLyric.word_count || wordCount
+                            };
+                        });
+                        
+                        console.log(`Updated song with backend-selected lyric time: ${backendSelectedLyric.startTimeMs}`);
+                    }
+                }
+                
                 // Send the lyrics data through the controllerSocket API
                 controllerSocket.sendLyricsData(data);
             })
