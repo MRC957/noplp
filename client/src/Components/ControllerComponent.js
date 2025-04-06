@@ -597,6 +597,10 @@ const ControllerComponent = () => {
      */
     const fetchLyricsForSong = (songId, trackId) => {
         if (!trackId) return;
+
+        // Find the song to get its selected_lyric_time if available
+        const song = songList.find(s => s.id === songId);
+        const selectedLyricTime = song?.selected_lyric_time;
                 
         setState(prevState => ({
             ...prevState,
@@ -614,12 +618,24 @@ const ControllerComponent = () => {
                 return response.json();
             })
             .then(data => {
+                const lyrics = data.lyrics || [];
+                
+                // Find the index of the previously selected lyric based on the stored startTimeMs
+                let initialSelectedIndex = -1;
+                if (selectedLyricTime) {
+                    initialSelectedIndex = lyrics.findIndex(lyric => 
+                        lyric.startTimeMs === selectedLyricTime
+                    );
+                    console.log(`Found previously selected lyric at index ${initialSelectedIndex} with time ${selectedLyricTime}`);
+                }
+                
                 setState(prevState => ({
                     ...prevState,
-                    allLyrics: data.lyrics || [],
+                    allLyrics: lyrics,
                     lyricsToGuess: data.lyricsToGuess || [],
                     lyricsLoading: false,
-                    showLyricsSelector: true
+                    showLyricsSelector: true,
+                    selectedLyricIndex: initialSelectedIndex >= 0 ? initialSelectedIndex : -1
                 }));
                 console.log('Fetched lyrics:', data);
             })

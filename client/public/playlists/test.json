@@ -1,0 +1,120 @@
+{
+  "categories": [
+    {
+      "difficulty": 50,
+      "expected_words": 8,
+      "id": "b6d87cff-69be-473b-865a-837365c3c387",
+      "name": "Années 1980"
+    },
+    {
+      "difficulty": 40,
+      "expected_words": 6,
+      "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "name": "Comédie musicale"
+    },
+    {
+      "difficulty": 30,
+      "expected_words": 5,
+      "id": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "name": "Disney & films"
+    },
+    {
+      "difficulty": 20,
+      "expected_words": 3,
+      "id": "374990b6-dd82-4c45-8af7-6ce06ca33f26",
+      "name": "C'est du belge !"
+    },
+    {
+      "difficulty": 10,
+      "expected_words": 2,
+      "id": "6f4d6da2-d456-4502-8773-5d64157fc756",
+      "name": "Années 2020"
+    }
+  ],
+  "name": "test",
+  "songs": [
+    {
+      "id": "2vRKm8OTmxJP1dImXQ8Od3",
+      "track_id": "2vRKm8OTmxJP1dImXQ8Od3",
+      "category": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "artist": "Dimitri Rougeul",
+      "title": "Je Voudrais Déjà Être Roi",
+      "release_year": 2011,
+      "selected_lyric_time": 26620
+    },
+    {
+      "id": "0JHBh215irY3h3ObwHKKib",
+      "track_id": "0JHBh215irY3h3ObwHKKib",
+      "category": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "artist": "Anthony Kavanagh",
+      "title": "Nuits d'Arabie (2019)",
+      "release_year": null
+    },
+    {
+      "id": "3bHwuIcUkM1mc7c1u7vgbQ",
+      "track_id": "3bHwuIcUkM1mc7c1u7vgbQ",
+      "category": "b6d87cff-69be-473b-865a-837365c3c387",
+      "artist": "Daniel Balavoine",
+      "title": "Je ne suis pas un héros",
+      "release_year": 1980,
+      "selected_lyric_time": 21020
+    },
+    {
+      "id": "2UC5XnHA1Wn9FjQmbjNca9",
+      "track_id": "2UC5XnHA1Wn9FjQmbjNca9",
+      "category": "b6d87cff-69be-473b-865a-837365c3c387",
+      "artist": "Indochine",
+      "title": "L'aventurier",
+      "release_year": 1982,
+      "selected_lyric_time": 46280
+    },
+    {
+      "id": "2QxpVhguEv67Lwlf3wwltb",
+      "track_id": "2QxpVhguEv67Lwlf3wwltb",
+      "category": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "artist": "Damien Sargue",
+      "title": "Les rois du monde - Roméo & Juliette, Les enfants de Vérone",
+      "release_year": 2009
+    },
+    {
+      "id": "3YGu8R8qOorKrfhpdeluyW",
+      "track_id": "3YGu8R8qOorKrfhpdeluyW",
+      "category": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "artist": "Bruno Pelletier",
+      "title": "Le temps des cathédrales",
+      "release_year": 1998
+    },
+    {
+      "id": "57InPX86dWSiQexyA7xx5i",
+      "track_id": "57InPX86dWSiQexyA7xx5i",
+      "category": "6f4d6da2-d456-4502-8773-5d64157fc756",
+      "artist": "Pierre Garnier",
+      "title": "Ceux qu'on était",
+      "release_year": 2024
+    },
+    {
+      "id": "1XvJsU6MclBuTkNTXzr79Q",
+      "track_id": "1XvJsU6MclBuTkNTXzr79Q",
+      "category": "6f4d6da2-d456-4502-8773-5d64157fc756",
+      "artist": "Vianney",
+      "title": "Les imbéciles",
+      "release_year": 2020
+    },
+    {
+      "id": "6An1wjpjiQ27KcNjfKSVxD",
+      "track_id": "6An1wjpjiQ27KcNjfKSVxD",
+      "category": "374990b6-dd82-4c45-8af7-6ce06ca33f26",
+      "artist": "Helena",
+      "title": "Nouveau coeur",
+      "release_year": 2024
+    },
+    {
+      "id": "34dx8DACTJsc3rsJdaEIQw",
+      "track_id": "34dx8DACTJsc3rsJdaEIQw",
+      "category": "374990b6-dd82-4c45-8af7-6ce06ca33f26",
+      "artist": "Stromae",
+      "title": "Papaoutai",
+      "release_year": 2013
+    }
+  ]
+}
