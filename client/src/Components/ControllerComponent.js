@@ -35,7 +35,7 @@ const ControllerComponent = () => {
         trackId: '',              // Current Spotify track ID
         songResults: {},          // Results of lyric guesses by song ID
         availablePlaylists: [],   // List of available playlists
-        currentPlaylist: 'playlist', // Currently selected playlist
+        currentPlaylist: 'carnaval_1', // Currently selected playlist
         newPlaylistName: '',      // Name for saving playlist
         showSavePlaylist: false,  // Whether to show save playlist UI
         
@@ -662,7 +662,7 @@ const ControllerComponent = () => {
      * 
      * @param {number} index - The index of the selected lyric in allLyrics
      */
-    const handleSelectLyricToGuess = (index) => {
+    const handleSelectLyricToGuess = (index, songId) => {
         if (index < 0 || index >= state.allLyrics.length) return;
         
         const selectedLyric = state.allLyrics[index];

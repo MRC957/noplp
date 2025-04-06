@@ -372,9 +372,10 @@ def extract_lyric_to_guess(df, words_to_guess=5, recursion_depth=0):
     # Count the number of words in each line separated by a space " " or a " ' "
     df['word_count'] = count_words(df['words'])
 
-    # Choose a random row where word_count is greater than 'nb_missing_lyrics after the 10 first lyrics
-    min_song_duration = 20000 # Guess after min 20 seconds
-    df_reduced = df[df["startTimeMs"] > min_song_duration]
+    # Choose a random row where word_count equals words_to_guess, with time constraints
+    min_song_duration = 20000  # Guess after min 20 seconds
+    max_song_duration = 150000  # Don't guess after 150 seconds
+    df_reduced = df[(df["startTimeMs"] > min_song_duration) & (df["startTimeMs"] < max_song_duration)]
     guess_candidates = df_reduced[df_reduced['word_count'] == words_to_guess]
 
     # Add condition to discard when MORE than words_to_guess
@@ -1029,7 +1030,7 @@ def save_playlist():
             # Keep only necessary song data
             filtered_songs = []
             for song in playlist_data['songs']:
-                filtered_song = {k: song[k] for k in ["id", "track_id", "category", "artist", "title", "release_year"] if k in song}
+                filtered_song = {k: song[k] for k in ["id", "track_id", "category", "artist", "title", "release_year", "selected_lyric_time"] if k in song}
                 filtered_songs.append(filtered_song)
             playlist_data['songs'] = filtered_songs
 

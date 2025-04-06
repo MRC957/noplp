@@ -62,9 +62,6 @@ const LyricsSelector = ({
                         const seconds = timeInSeconds % 60;
                         const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                         
-                        // Count words in this lyric
-                        const wordCount = lyric.word_count;
-                        
                         // Check if this is the currently selected lyric
                         const isSelected = index === selectedLyricIndex;
                         
@@ -72,11 +69,11 @@ const LyricsSelector = ({
                             <div 
                                 key={`lyric-${index}`}
                                 className={`lyric-item ${isSelected ? 'selected' : ''}`}
-                                onClick={() => onLyricSelect(index)}
+                                onClick={() => onLyricSelect(index, songId)}
                             >
                                 <div className="lyric-time">{formattedTime}</div>
                                 <div className="lyric-content">{lyric.words}</div>
-                                <div className="lyric-word-count">({wordCount} words)</div>
+                                <div className="lyric-word-count">({lyric.word_count} words)</div>
                             </div>
                         );
                     })}
