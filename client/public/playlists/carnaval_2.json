@@ -1,0 +1,127 @@
+{
+  "categories": [
+    {
+      "difficulty": 50,
+      "expected_words": 8,
+      "id": "123e4567-e89b-12d3-a456-426655440000",
+      "name": "Légendes du passé"
+    },
+    {
+      "difficulty": 40,
+      "expected_words": 6,
+      "id": "bd5bff76-cabd-4d93-8850-0e15bac81456",
+      "name": "Chansons d'amour"
+    },
+    {
+      "difficulty": 30,
+      "expected_words": 5,
+      "id": "45c45c45-45c4-45c4-45c4-45c445c445c4",
+      "name": "Nouvelle Génération"
+    },
+    {
+      "difficulty": 20,
+      "expected_words": 3,
+      "id": "33d44e80-4411-41e0-af85-0d4e976b087e",
+      "name": "M. Pokora"
+    },
+    {
+      "difficulty": 10,
+      "expected_words": 2,
+      "id": "1a2b3c4d-1a2b-1a2b-1a2b-1a2b1a2b1a2b",
+      "name": "Humour & Ironie"
+    }
+  ],
+  "name": "carnaval_2",
+  "songs": [
+    {
+      "id": "7sKDftgGirHWTVFMtJoDoh",
+      "track_id": "7sKDftgGirHWTVFMtJoDoh",
+      "category": "45c45c45-45c4-45c4-45c4-45c445c445c4",
+      "artist": "Aya Nakamura",
+      "title": "Djadja",
+      "release_year": 2018,
+      "selected_lyric_time": 76420
+    },
+    {
+      "id": "57I5KhEpQFC9XBgKt6nklL",
+      "track_id": "57I5KhEpQFC9XBgKt6nklL",
+      "category": "45c45c45-45c4-45c4-45c4-45c445c445c4",
+      "artist": "Nekfeu",
+      "title": "On verra",
+      "release_year": 2015,
+      "selected_lyric_time": 112110
+    },
+    {
+      "id": "6n8rdJ6dYRXYp11ANhYhrG",
+      "track_id": "6n8rdJ6dYRXYp11ANhYhrG",
+      "category": "bd5bff76-cabd-4d93-8850-0e15bac81456",
+      "artist": "Hoshi",
+      "title": "Amour Censure",
+      "release_year": 2020,
+      "selected_lyric_time": 61790
+    },
+    {
+      "id": "5B6ES5IUbed17EgLnKhPjI",
+      "track_id": "5B6ES5IUbed17EgLnKhPjI",
+      "category": "bd5bff76-cabd-4d93-8850-0e15bac81456",
+      "artist": "Amir",
+      "title": "Rétine",
+      "release_year": 2021,
+      "selected_lyric_time": 60750
+    },
+    {
+      "id": "4VWbPQUPvLes814r6T11Jz",
+      "track_id": "4VWbPQUPvLes814r6T11Jz",
+      "category": "123e4567-e89b-12d3-a456-426655440000",
+      "artist": "Joe Dassin",
+      "title": "Les Champs-Elysées",
+      "release_year": 1969,
+      "selected_lyric_time": 72930
+    },
+    {
+      "id": "60VNmTr9ox1PaCIOCprfIa",
+      "track_id": "60VNmTr9ox1PaCIOCprfIa",
+      "category": "123e4567-e89b-12d3-a456-426655440000",
+      "artist": "Johnny Hallyday",
+      "title": "Allumer le feu",
+      "release_year": 1998,
+      "selected_lyric_time": 91950
+    },
+    {
+      "id": "7yaeoyjJmeHJ6xMFlj4xJr",
+      "track_id": "7yaeoyjJmeHJ6xMFlj4xJr",
+      "category": "33d44e80-4411-41e0-af85-0d4e976b087e",
+      "artist": "M. Pokora",
+      "title": "Parce que c'est toi",
+      "release_year": 2022,
+      "selected_lyric_time": 62160
+    },
+    {
+      "id": "27kV1kvGUacbiRpf1VsQWe",
+      "track_id": "27kV1kvGUacbiRpf1VsQWe",
+      "category": "33d44e80-4411-41e0-af85-0d4e976b087e",
+      "artist": "M. Pokora",
+      "title": "Elle me contrôle",
+      "release_year": 2004,
+      "selected_lyric_time": 56540
+    },
+    {
+      "id": "6XBaTMiZa77Du2XEl1RNaa",
+      "track_id": "6XBaTMiZa77Du2XEl1RNaa",
+      "category": "1a2b3c4d-1a2b-1a2b-1a2b-1a2b1a2b1a2b",
+      "artist": "Patrick Sébastien",
+      "title": "Les sardines",
+      "release_year": 2006,
+      "selected_lyric_time": 69550
+    },
+    {
+      "id": "3WFP6beklK0c62PrsBp2Mc",
+      "track_id": "3WFP6beklK0c62PrsBp2Mc",
+      "category": "1a2b3c4d-1a2b-1a2b-1a2b-1a2b1a2b1a2b",
+      "artist": "Fatal Bazooka",
+      "title": "Fous ta cagoule - Radio Edit",
+      "release_year": 2007,
+      "selected_lyric_time": 45640
+    }
+  ]
+}

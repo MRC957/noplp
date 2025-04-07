@@ -1,0 +1,127 @@
+{
+  "categories": [
+    {
+      "difficulty": 50,
+      "expected_words": 8,
+      "id": "15908d99-c60f-4750-ba39-5e92c7f4c0ed",
+      "name": "Années 2000"
+    },
+    {
+      "difficulty": 40,
+      "expected_words": 6,
+      "id": "39fb524d-183d-49a3-abf8-3039007c67ed",
+      "name": "C'est Marseille BB"
+    },
+    {
+      "difficulty": 30,
+      "expected_words": 5,
+      "id": "9ccadeaf-d1fa-4445-a035-c5841bce8e5f",
+      "name": "Chanson française"
+    },
+    {
+      "difficulty": 20,
+      "expected_words": 3,
+      "id": "1fbbe6a9-4ae3-43e8-81cb-92fd828ab918",
+      "name": "Fête & Danse"
+    },
+    {
+      "difficulty": 10,
+      "expected_words": 2,
+      "id": "a9e003c3-6ea8-49c1-a39d-4978ac27efa0",
+      "name": "Vitaa"
+    }
+  ],
+  "name": "carnaval_4",
+  "songs": [
+    {
+      "id": "7bZknZ9h1Gnv1dEpiyAvso",
+      "track_id": "7bZknZ9h1Gnv1dEpiyAvso",
+      "category": "15908d99-c60f-4750-ba39-5e92c7f4c0ed",
+      "artist": "Superbus",
+      "title": "Butterfly",
+      "release_year": 2006,
+      "selected_lyric_time": 87730
+    },
+    {
+      "id": "1HOtCYTuOCISpTn9cW6fcz",
+      "track_id": "1HOtCYTuOCISpTn9cW6fcz",
+      "category": "15908d99-c60f-4750-ba39-5e92c7f4c0ed",
+      "artist": "Amel Bent",
+      "title": "Ma philosophie",
+      "release_year": 2004,
+      "selected_lyric_time": 122800
+    },
+    {
+      "id": "46vfSYsDJZaNQcD4YvT8GD",
+      "track_id": "46vfSYsDJZaNQcD4YvT8GD",
+      "category": "39fb524d-183d-49a3-abf8-3039007c67ed",
+      "artist": "Naps",
+      "title": "Best life",
+      "release_year": 2021,
+      "selected_lyric_time": 69870
+    },
+    {
+      "id": "4CWcaGtaOyAqBDKIeZMUe0",
+      "track_id": "4CWcaGtaOyAqBDKIeZMUe0",
+      "category": "39fb524d-183d-49a3-abf8-3039007c67ed",
+      "artist": "Naps",
+      "title": "La kiffance",
+      "release_year": null,
+      "selected_lyric_time": 88920
+    },
+    {
+      "id": "35jK3rPCyBf1bUCJTEYyau",
+      "track_id": "35jK3rPCyBf1bUCJTEYyau",
+      "category": "9ccadeaf-d1fa-4445-a035-c5841bce8e5f",
+      "artist": "Claude François",
+      "title": "Alexandrie Alexandra",
+      "release_year": 2022,
+      "selected_lyric_time": 91340
+    },
+    {
+      "id": "2d8D7uk3tbAThjRkdfrx9c",
+      "track_id": "2d8D7uk3tbAThjRkdfrx9c",
+      "category": "9ccadeaf-d1fa-4445-a035-c5841bce8e5f",
+      "artist": "Desireless",
+      "title": "Voyage voyage",
+      "release_year": 2001,
+      "selected_lyric_time": 70000
+    },
+    {
+      "id": "5kOqtnFQUu1GefBicHSHLS",
+      "track_id": "5kOqtnFQUu1GefBicHSHLS",
+      "category": "1fbbe6a9-4ae3-43e8-81cb-92fd828ab918",
+      "artist": "Faudel",
+      "title": "Mon pays",
+      "release_year": 2006,
+      "selected_lyric_time": 63920
+    },
+    {
+      "id": "15RB3lFt2Mhc16m5fTTYkh",
+      "track_id": "15RB3lFt2Mhc16m5fTTYkh",
+      "category": "1fbbe6a9-4ae3-43e8-81cb-92fd828ab918",
+      "artist": "Tragédie",
+      "title": "Hey Oh - Radio Edit",
+      "release_year": 2003,
+      "selected_lyric_time": 50600
+    },
+    {
+      "id": "0MYIGQIyTb99aDHGMcysTQ",
+      "track_id": "0MYIGQIyTb99aDHGMcysTQ",
+      "category": "a9e003c3-6ea8-49c1-a39d-4978ac27efa0",
+      "artist": "Vitaa",
+      "title": "Je n'oublie pas",
+      "release_year": 2024,
+      "selected_lyric_time": 52840
+    },
+    {
+      "id": "4iNPp0BZ4lBu7bipdWLcWk",
+      "track_id": "4iNPp0BZ4lBu7bipdWLcWk",
+      "category": "a9e003c3-6ea8-49c1-a39d-4978ac27efa0",
+      "artist": "Vitaa",
+      "title": "Avant toi",
+      "release_year": 2019,
+      "selected_lyric_time": 65640
+    }
+  ]
+}

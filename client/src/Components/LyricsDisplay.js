@@ -119,16 +119,18 @@ const processLyricLine = (line, guessEntry, suggestedLyrics, isPaused, revealedL
       
       case STATE_LYRICS_VALIDATE:
         // Compare suggested words with correct words for validation
+        // Clean up and split words, removing special characters
         const suggestedWords = suggestedLyrics.content.split(/\s+/);
-        const correctWords = originalWords.split(/\s+/);
+        const suggestedWordsToCompare = suggestedLyrics.content.replace(/[^\w\s']|_/g, '').toLowerCase().split(/\s+/);
+        const correctWords = originalWords.replace(/[^\w\s']|_/g, '').toLowerCase().split(/\s+/);
         
         return (
           <>
             {beforeText}
-            {suggestedWords.map((word, index) => {
+            {correctWords.map((word, index) => {
               // Check if each word is correct (case insensitive comparison)
               const isCorrect = index < correctWords.length && 
-                          word.toLowerCase() === correctWords[index].toLowerCase();
+                suggestedWordsToCompare[index].toLowerCase() === correctWords[index].toLowerCase();
               return (
                 <span key={index} className={`lyrics-word ${isCorrect ? 'good' : 'bad'}`}>
                   {word}{index < suggestedWords.length - 1 ? ' ' : ''}

@@ -1,0 +1,127 @@
+{
+  "categories": [
+    {
+      "difficulty": 50,
+      "expected_words": 8,
+      "id": "7acf4687-3ea9-4120-bea4-97428d8a8530",
+      "name": "Rap & Hip-Hop"
+    },
+    {
+      "difficulty": 40,
+      "expected_words": 6,
+      "id": "f02d8580-2bdf-441f-b4a5-9d140678e089",
+      "name": "Soprano"
+    },
+    {
+      "difficulty": 30,
+      "expected_words": 5,
+      "id": "4765338d-3882-4e41-82b6-e5cc9fb47c51",
+      "name": "Nostalgie & Souvenirs"
+    },
+    {
+      "difficulty": 20,
+      "expected_words": 3,
+      "id": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "name": "Disney & films"
+    },
+    {
+      "difficulty": 10,
+      "expected_words": 2,
+      "id": "15908d99-c60f-4750-ba39-5e92c7f4c0ed",
+      "name": "Années 2000"
+    }
+  ],
+  "name": "carnaval_3",
+  "songs": [
+    {
+      "id": "0C9qil6cXEEJ8AzrMUEHv6",
+      "track_id": "0C9qil6cXEEJ8AzrMUEHv6",
+      "category": "7acf4687-3ea9-4120-bea4-97428d8a8530",
+      "artist": "Diam's",
+      "title": "Confessions Nocturnes",
+      "release_year": 2006,
+      "selected_lyric_time": 56280
+    },
+    {
+      "id": "3Uyt0WO3wOopnUBCe9BaXl",
+      "track_id": "3Uyt0WO3wOopnUBCe9BaXl",
+      "category": "7acf4687-3ea9-4120-bea4-97428d8a8530",
+      "artist": "Black M",
+      "title": "Sur ma route",
+      "release_year": 2014,
+      "selected_lyric_time": 82700
+    },
+    {
+      "id": "1RighqmKZNqLP9rklJ4HCz",
+      "track_id": "1RighqmKZNqLP9rklJ4HCz",
+      "category": "f02d8580-2bdf-441f-b4a5-9d140678e089",
+      "artist": "Soprano",
+      "title": "Le coach (feat. Vincenzo)",
+      "release_year": 2018,
+      "selected_lyric_time": 91460.00000000001
+    },
+    {
+      "id": "2imLYhuE0rBYnSrhXDOaRX",
+      "track_id": "2imLYhuE0rBYnSrhXDOaRX",
+      "category": "f02d8580-2bdf-441f-b4a5-9d140678e089",
+      "artist": "Soprano",
+      "title": "Ninja",
+      "release_year": 2018,
+      "selected_lyric_time": 109550
+    },
+    {
+      "id": "5pqhqSdrxLXDZY9eeCAtSJ",
+      "track_id": "5pqhqSdrxLXDZY9eeCAtSJ",
+      "category": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "artist": "Anaïs Delva",
+      "title": "Libérée, Délivrée - De \"La Reine des Neiges\"/Bande Originale Française",
+      "release_year": 2013,
+      "selected_lyric_time": 71190
+    },
+    {
+      "id": "5g9E2PkKFSVJAApILSrevP",
+      "track_id": "5g9E2PkKFSVJAApILSrevP",
+      "category": "61398d55-8b3d-4d31-b04b-e9b92a048da9",
+      "artist": "Patrick Fiori",
+      "title": "Comme un homme - De \"Mulan\"/Bande Originale Française du Film",
+      "release_year": null,
+      "selected_lyric_time": 107110
+    },
+    {
+      "id": "2QSAj76Ba6aMFX9RlXdUdO",
+      "track_id": "2QSAj76Ba6aMFX9RlXdUdO",
+      "category": "4765338d-3882-4e41-82b6-e5cc9fb47c51",
+      "artist": "Indochine",
+      "title": "J'ai demandé à la lune",
+      "release_year": 2002,
+      "selected_lyric_time": 88350
+    },
+    {
+      "id": "7mNErWes3YegbRLgZuILl5",
+      "track_id": "7mNErWes3YegbRLgZuILl5",
+      "category": "4765338d-3882-4e41-82b6-e5cc9fb47c51",
+      "artist": "Kyo",
+      "title": "Dernière danse",
+      "release_year": 2003,
+      "selected_lyric_time": 78950
+    },
+    {
+      "id": "4E8hgGDOwG5CpiEke6qZMT",
+      "track_id": "4E8hgGDOwG5CpiEke6qZMT",
+      "category": "15908d99-c60f-4750-ba39-5e92c7f4c0ed",
+      "artist": "Christophe Maé",
+      "title": "On s'attache",
+      "release_year": 2007,
+      "selected_lyric_time": 92930
+    },
+    {
+      "id": "1cl6UxttwMTjJXsdyMDUde",
+      "track_id": "1cl6UxttwMTjJXsdyMDUde",
+      "category": "15908d99-c60f-4750-ba39-5e92c7f4c0ed",
+      "artist": "Grégoire",
+      "title": "Toi + Moi",
+      "release_year": 2008,
+      "selected_lyric_time": 75960
+    }
+  ]
+}
