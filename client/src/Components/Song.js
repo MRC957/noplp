@@ -29,6 +29,7 @@ import { emitEvent } from "../hooks/socketManager";
 import SpotifyPlayer from "./SpotifyPlayer";
 import LyricsDisplay from "./LyricsDisplay";
 import SongHeader from "./SongHeader";
+import { compareLyrics } from "../utils/lyricsUtils"; // Import the shared utility function
 import "./Song.css";
 
 // Import lyric state constants from the unified constants file
@@ -173,11 +174,9 @@ const Song = ({ song, colorFlash, jukebox, suggestedLyrics, lyrics = [], lyricsT
     const guessEntry = lyricsState.lyricsToGuess.find(g => g.startTimeMs === currentLine.startTimeMs);
     if (!guessEntry || !guessEntry.words) return false;
 
-    // Compare the suggested lyrics with the correct ones
-    const suggestedWords = suggestedLyrics.content.toLowerCase().trim();
-    const correctWords = guessEntry.words.toLowerCase().trim();
-    
-    return suggestedWords === correctWords;
+    // Compare the suggested lyrics with the correct ones using the shared utility function
+    const comparisonResult = compareLyrics(suggestedLyrics.content, guessEntry.words);
+    return comparisonResult.isCorrect;
   };
 
   /**

@@ -1,5 +1,6 @@
 import React from "react";
 import TextBox from "./TextBox";
+import { compareLyrics } from "../utils/lyricsUtils"; // Import the shared utility function
 import "./Song.css";
 
 // Import lyric state constants from the unified constants file
@@ -119,24 +120,17 @@ const processLyricLine = (line, guessEntry, suggestedLyrics, isPaused, revealedL
       
       case STATE_LYRICS_VALIDATE:
         // Compare suggested words with correct words for validation
-        // Clean up and split words, removing special characters
-        const suggestedWords = suggestedLyrics.content.split(/\s+/);
-        const suggestedWordsToCompare = suggestedLyrics.content.replace(/[^\w\s']|_/g, '').toLowerCase().split(/\s+/);
-        const correctWords = originalWords.replace(/[^\w\s']|_/g, '').toLowerCase().split(/\s+/);
+        // Use the shared compareLyrics utility function
+        const { wordResults } = compareLyrics(suggestedLyrics.content, originalWords);
         
         return (
           <>
             {beforeText}
-            {correctWords.map((word, index) => {
-              // Check if each word is correct (case insensitive comparison)
-              const isCorrect = index < correctWords.length && 
-                suggestedWordsToCompare[index].toLowerCase() === correctWords[index].toLowerCase();
-              return (
-                <span key={index} className={`lyrics-word ${isCorrect ? 'good' : 'bad'}`}>
-                  {word}{index < suggestedWords.length - 1 ? ' ' : ''}
-                </span>
-              );
-            })}
+            {wordResults.map((result, index) => (
+              <span key={index} className={`lyrics-word ${result.isCorrect ? 'good' : 'bad'}`}>
+                {result.suggested}{index < wordResults.length - 1 ? ' ' : ''}
+              </span>
+            ))}
             {afterText}
           </>
         );

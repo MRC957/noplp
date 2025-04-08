@@ -57,7 +57,7 @@ const LyricsControls = ({
     const wordCount = proposedLyrics.trim().replace(/'/g, ' ').split(/\s+/).filter(word => word.length > 0).length;
     
     // Only enable propose/freeze buttons if the expected number of words has been entered
-    const canPropose = expectedWords > 0 && wordCount === expectedWords;
+    // const canPropose = expectedWords > 0 && wordCount === expectedWords;
 
     return (
         <div className="lyrics-form">
@@ -67,8 +67,10 @@ const LyricsControls = ({
                 onChange={handleInput} 
             />
             <div>
-                <button onClick={handlePropose} disabled={!canPropose}>Propose Lyrics</button>
-                <button onClick={handleFreeze} disabled={!canPropose}>Freeze</button>
+                {/* <button onClick={handlePropose} disabled={!canPropose}>Propose Lyrics</button>
+                <button onClick={handleFreeze} disabled={!canPropose}>Freeze</button> */}
+                <button onClick={handlePropose} >Propose Lyrics</button>
+                <button onClick={handleFreeze} >Freeze</button>
                 <button onClick={onValidate}>Validate</button>
                 <button onClick={onReveal}>Reveal</button>
                 <button onClick={onContinue}>Continue</button>
